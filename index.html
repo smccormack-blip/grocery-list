@@ -294,12 +294,12 @@
         /* Flying Shopping Man Animation */
         .flying-hero {
             position: fixed;
-            bottom: 200px;
+            bottom: 120px;
             left: -100px;
             width: 80px;
             height: 80px;
             font-size: 60px;
-            animation: fly 8s linear infinite;
+            animation: fly 15s linear infinite;
             z-index: 50;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
         }
@@ -311,15 +311,15 @@
         }
         .follower {
             position: fixed;
-            bottom: 200px;
+            bottom: 120px;
             font-size: 40px;
-            animation: follow 8s linear infinite;
+            animation: follow 15s linear infinite;
             z-index: 49;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
         }
-        .follower:nth-child(2) { animation-delay: 0.3s; bottom: 190px; }
-        .follower:nth-child(3) { animation-delay: 0.6s; bottom: 210px; }
-        .follower:nth-child(4) { animation-delay: 0.9s; bottom: 195px; }
+        .follower:nth-child(2) { animation-delay: 0.5s; bottom: 145px; }
+        .follower:nth-child(3) { animation-delay: 1s; bottom: 95px; }
+        .follower:nth-child(4) { animation-delay: 1.5s; bottom: 130px; }
         @keyframes follow {
             0% { left: -120px; opacity: 0; }
             10% { opacity: 1; }
