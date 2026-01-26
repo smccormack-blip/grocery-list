@@ -433,47 +433,39 @@
         const defaultQuickItems = ['Eggs','Milk','Bread','Butter','Cheese','Chicken','Bananas','Apples','Lettuce','Tomatoes','Onions','Potatoes','Rice','Pasta','Coffee'];
 
         // Sound effects
+        let yummyAudio = null;
+        let yuckAudio = null;
+        
+        function initSounds() {
+            try {
+                yummyAudio = new Audio('yummy.m4a');
+                yuckAudio = new Audio('yuck.m4a');
+                yummyAudio.load();
+                yuckAudio.load();
+            } catch(e) {
+                console.log('Audio init error:', e);
+            }
+        }
+        
         const sounds = {
             yum: () => {
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance('Yum!');
-                    utterance.rate = 1.5;
-                    utterance.pitch = 1.2;
-                    utterance.volume = 0.8;
-                    speechSynthesis.speak(utterance);
-                } else {
-                    // Fallback beep
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.frequency.value = 800;
-                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-                    osc.start(ctx.currentTime);
-                    osc.stop(ctx.currentTime + 0.1);
+                try {
+                    if (yummyAudio) {
+                        yummyAudio.currentTime = 0;
+                        yummyAudio.play().catch(e => console.log('Yum play failed:', e));
+                    }
+                } catch(e) {
+                    console.log('Yum error:', e);
                 }
             },
             yuck: () => {
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance('Yuck!');
-                    utterance.rate = 1.2;
-                    utterance.pitch = 0.8;
-                    utterance.volume = 0.8;
-                    speechSynthesis.speak(utterance);
-                } else {
-                    // Fallback beep
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.frequency.value = 200;
-                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-                    osc.start(ctx.currentTime);
-                    osc.stop(ctx.currentTime + 0.2);
+                try {
+                    if (yuckAudio) {
+                        yuckAudio.currentTime = 0;
+                        yuckAudio.play().catch(e => console.log('Yuck play failed:', e));
+                    }
+                } catch(e) {
+                    console.log('Yuck error:', e);
                 }
             },
             swoosh: () => {
@@ -497,6 +489,7 @@
 
         function init() {
             loadData();
+            initSounds();
             checkMicPermission();
             setupVoiceRecognition();
             updateUI();
@@ -578,11 +571,14 @@
                     
                     if (confirmed) {
                         completedItems.forEach(item => {
-                            const idx = groceryList.findIndex(i => i.toLowerCase() === item.toLowerCase());
+                            const normItem = item.toLowerCase();
+                            // Remove from active list
+                            const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
                             if (idx !== -1) {
-                                deletedItems.push(groceryList[idx]);
                                 groceryList.splice(idx, 1);
                             }
+                            // Also remove from deleted list (clean slate after shopping)
+                            deletedItems = deletedItems.filter(d => d.toLowerCase() !== normItem);
                         });
                         saveData();
                         showToast(`🦸‍♂️ Cleared ${completedItems.length} completed item(s)!`);
@@ -700,14 +696,46 @@
             document.getElementById('status-text').textContent = 'Tap the microphone and say your items. Pause between items. Once you are finished adding items, tap the microphone again to turn it off.\n\nSwipe right to see quick select screens, list and SHOPPING MAN MODE!';
         }
 
+        // Multi-word items that should stay together
+        const multiWordItems = {
+            'cat food': /\bcat\s+food\b/gi,
+            'dog food': /\bdog\s+food\b/gi,
+            'half and half': /\bhalf\s+and\s+half\b/gi,
+            'ice cream': /\bice\s+cream\b/gi,
+            'peanut butter': /\bpeanut\s+butter\b/gi,
+            'orange juice': /\borange\s+juice\b/gi,
+            'apple juice': /\bapple\s+juice\b/gi
+        };
+
         function processVoice(transcript) {
+            // First, protect multi-word items by replacing them with placeholders
+            let processed = transcript;
+            const replacements = {};
+            let placeholderIndex = 0;
+            
+            Object.entries(multiWordItems).forEach(([item, regex]) => {
+                processed = processed.replace(regex, () => {
+                    const placeholder = `__ITEM${placeholderIndex}__`;
+                    replacements[placeholder] = item;
+                    placeholderIndex++;
+                    return placeholder;
+                });
+            });
+            
             // Split on common punctuation and natural pauses
-            const items = transcript.split(/[.,;!?]|\s{2,}/)
-                .map(i => i.trim().replace(/^(and|add|also|plus)\s+/i, ''))
+            const items = processed.split(/[.,;!?]|\s{2,}/)
+                .map(i => {
+                    let cleaned = i.trim().replace(/^(and|add|also|plus)\s+/i, '');
+                    // Restore multi-word items
+                    Object.entries(replacements).forEach(([placeholder, original]) => {
+                        cleaned = cleaned.replace(placeholder, original);
+                    });
+                    return cleaned;
+                })
                 .filter(i => i.length > 2);
             
             items.forEach(item => {
-                if (item.length > 0) addItem(item);
+                if (item.length > 0 && !item.includes('__ITEM')) addItem(item);
             });
             
             if (items.length > 0) currentTranscript = '';
@@ -789,7 +817,7 @@
                 });
                 deletedItems.forEach(item => {
                     html += `<div class="list-item deleted">
-                        <span>${item} (removed by you)</span>
+                        <span>${item}</span>
                         <button class="delete-btn" onclick="restoreItem('${item.replace(/'/g, "\\'")}')">Restore</button>
                     </div>`;
                 });
@@ -952,11 +980,13 @@
                 navigator.share({ title: 'Shopping Complete!', text, url })
                     .then(() => {
                         shoppingChecked.forEach(item => {
-                            const idx = groceryList.findIndex(i => i === item);
+                            const normItem = item.toLowerCase();
+                            const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
                             if (idx !== -1) {
-                                deletedItems.push(item);
                                 groceryList.splice(idx, 1);
                             }
+                            // Clear from deleted items too (clean slate)
+                            deletedItems = deletedItems.filter(d => d.toLowerCase() !== normItem);
                         });
                         shoppingChecked = [];
                         saveData();
