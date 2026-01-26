@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Grocery List</title>
+    <title>Grocery List - Shopping Man Edition</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -87,15 +87,6 @@
             font-weight: bold;
             cursor: pointer;
         }
-        .info-banner {
-            background: #e3f2fd;
-            border: 2px solid #2196f3;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        .info-banner h3 { color: #1976d2; margin-bottom: 10px; font-size: 16px; }
-        .info-banner p { color: #1976d2; font-size: 14px; }
         .quick-items { display: grid; gap: 12px; margin-top: 20px; }
         .quick-item {
             background: white;
@@ -157,6 +148,99 @@
         .history-item h3 { color: #2c3e50; font-size: 16px; margin-bottom: 8px; }
         .history-item p { color: #777; font-size: 14px; margin-bottom: 6px; }
         .history-item ul { margin-top: 10px; padding-left: 20px; color: #555; }
+        
+        /* Shopping Man Screen */
+        .shopping-screen {
+            background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), 
+                        url('Shopping_Man.jpg') center/cover;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 80vh;
+        }
+        .shopping-screen h1 {
+            color: #ffd700;
+            text-shadow: 3px 3px 6px #000, 0 0 15px #ff0000, 0 0 25px #ff0000;
+            font-size: 28px;
+            margin-bottom: 15px;
+            animation: heroGlow 2s infinite;
+        }
+        @keyframes heroGlow {
+            0%, 100% { text-shadow: 3px 3px 6px #000, 0 0 15px #ff0000; }
+            50% { text-shadow: 3px 3px 6px #000, 0 0 25px #ff0000, 0 0 35px #ff6600; }
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            height: 35px;
+            margin: 15px 0 25px;
+            overflow: hidden;
+            border: 2px solid rgba(255,215,0,0.5);
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 0 10px rgba(76,175,80,0.8);
+        }
+        .shopping-item {
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            margin: 12px 0;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .shopping-item.checked {
+            background: rgba(76,175,80,0.4);
+            transform: scale(0.98);
+        }
+        .shopping-item.checked span {
+            text-decoration: line-through;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .shopping-item input[type="checkbox"] {
+            width: 32px;
+            height: 32px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #4CAF50;
+        }
+        .shopping-item span {
+            font-size: 20px;
+            color: #2c3e50;
+            flex-grow: 1;
+            font-weight: 500;
+        }
+        .fulfill-button {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 22px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255,107,107,0.5);
+            animation: pulse-glow 2s infinite;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(255,107,107,0.5); transform: scale(1); }
+            50% { box-shadow: 0 10px 35px rgba(255,107,107,0.9); transform: scale(1.02); }
+        }
+        .fulfill-button:active { transform: scale(0.95); }
+        
         .nav-dots {
             position: fixed;
             bottom: 30px;
@@ -164,6 +248,7 @@
             transform: translateX(-50%);
             display: flex;
             gap: 10px;
+            z-index: 100;
         }
         .dot {
             width: 12px;
@@ -172,8 +257,23 @@
             background: rgba(255,255,255,0.5);
             border: 2px solid #667eea;
             cursor: pointer;
+            transition: all 0.3s;
         }
         .dot.active { background: #667eea; transform: scale(1.3); }
+        .dot:last-child {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: rgba(255,215,0,0.3);
+            border-color: #ffd700;
+        }
+        .dot:last-child.active {
+            background: #ffd700;
+            box-shadow: 0 0 15px rgba(255,215,0,0.8);
+        }
         .toast {
             position: fixed;
             bottom: 100px;
@@ -245,7 +345,24 @@
             <h1>Past Lists</h1>
             <div id="history-list"></div>
             <div class="action-buttons">
+                <button class="btn btn-danger" onclick="clearOldHistory()">Clear Old History (8+ weeks)</button>
                 <button class="btn btn-secondary" onclick="showScreen('edit-screen')">Back</button>
+            </div>
+        </div>
+
+        <div id="shopping-screen" class="screen">
+            <div class="shopping-screen">
+                <h1>🦸‍♂️ SHOPPING MAN MODE 🦸‍♂️</h1>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="shopping-progress" style="width: 0%">0/0</div>
+                </div>
+                <div id="shopping-list"></div>
+                <button class="fulfill-button" onclick="fulfillFoodDuties()">
+                    🦸‍♂️ FULFILLED FOOD DUTIES! 🦸‍♂️
+                </button>
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="showScreen('voice-screen')">Back</button>
+                </div>
             </div>
         </div>
     </div>
@@ -254,11 +371,13 @@
         <div class="dot active" onclick="showScreen('voice-screen')"></div>
         <div class="dot" onclick="showScreen('quick-screen')"></div>
         <div class="dot" onclick="showScreen('edit-screen')"></div>
+        <div class="dot" onclick="showScreen('shopping-screen')">🦸</div>
     </div>
 
     <script>
         let groceryList = [];
         let deletedItems = [];
+        let shoppingChecked = [];
         let itemFrequency = {};
         let history = [];
         let isListening = false;
@@ -268,12 +387,24 @@
 
         const defaultQuickItems = ['Eggs','Milk','Bread','Butter','Cheese','Chicken','Bananas','Apples','Lettuce','Tomatoes','Onions','Potatoes','Rice','Pasta','Coffee'];
 
+        // Sound effects
+        const sounds = {
+            yum: () => { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 800; gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.1); },
+            yuck: () => { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 200; gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2); osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2); },
+            swoosh: () => { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3); osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3); }
+        };
+
+        function playSound(type) {
+            try { sounds[type](); } catch(e) { console.log('Sound error:', e); }
+        }
+
         function init() {
             loadData();
             checkMicPermission();
             setupVoiceRecognition();
             updateUI();
             handleIncomingShare();
+            handleShoppingCompletion();
         }
 
         function loadData() {
@@ -281,6 +412,7 @@
             deletedItems = JSON.parse(localStorage.getItem('deletedItems') || '[]');
             itemFrequency = JSON.parse(localStorage.getItem('itemFrequency') || '{}');
             history = JSON.parse(localStorage.getItem('groceryHistory') || '[]');
+            shoppingChecked = JSON.parse(localStorage.getItem('shoppingChecked') || '[]');
         }
 
         function saveData() {
@@ -288,6 +420,7 @@
             localStorage.setItem('deletedItems', JSON.stringify(deletedItems));
             localStorage.setItem('itemFrequency', JSON.stringify(itemFrequency));
             localStorage.setItem('groceryHistory', JSON.stringify(history));
+            localStorage.setItem('shoppingChecked', JSON.stringify(shoppingChecked));
         }
 
         function handleIncomingShare() {
@@ -300,11 +433,7 @@
                     const incomingItems = JSON.parse(decodeURIComponent(shared));
                     const incomingDeleted = sharedDeleted ? JSON.parse(decodeURIComponent(sharedDeleted)) : [];
                     
-                    // Smart merge logic
                     let added = 0;
-                    let restored = 0;
-                    
-                    // Add items from incoming list that we don't have
                     incomingItems.forEach(item => {
                         const normItem = item.toLowerCase().trim();
                         const existsInList = groceryList.some(i => i.toLowerCase() === normItem);
@@ -313,14 +442,9 @@
                         if (!existsInList && !wasDeleted) {
                             groceryList.push(item);
                             added++;
-                        } else if (wasDeleted && !existsInList) {
-                            // They have it but we deleted it - show as deleted
-                            deletedItems = deletedItems.filter(i => i.toLowerCase() !== normItem);
-                            deletedItems.push(item);
                         }
                     });
                     
-                    // Mark items as deleted if they deleted them
                     incomingDeleted.forEach(item => {
                         const normItem = item.toLowerCase().trim();
                         const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
@@ -337,6 +461,34 @@
                         if (added > 0) msg += `Added ${added} item(s). `;
                         if (incomingDeleted.length > 0) msg += `${incomingDeleted.length} item(s) marked as deleted.`;
                         showToast(msg.trim());
+                        updateUI();
+                    }
+                    
+                    window.history.replaceState({}, '', window.location.pathname);
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        function handleShoppingCompletion() {
+            const params = new URLSearchParams(window.location.search);
+            const completed = params.get('completed');
+            
+            if (completed) {
+                try {
+                    const completedItems = JSON.parse(decodeURIComponent(completed));
+                    const itemList = completedItems.join(', ');
+                    const confirmed = confirm(`🦸‍♂️ Shopping Man Saved the Day!\n\nClear these items from your list?\n\n${itemList}\n\nTap OK to clear them, or Cancel to keep them.`);
+                    
+                    if (confirmed) {
+                        completedItems.forEach(item => {
+                            const idx = groceryList.findIndex(i => i.toLowerCase() === item.toLowerCase());
+                            if (idx !== -1) {
+                                deletedItems.push(groceryList[idx]);
+                                groceryList.splice(idx, 1);
+                            }
+                        });
+                        saveData();
+                        showToast(`🦸‍♂️ Cleared ${completedItems.length} completed item(s)!`);
                         updateUI();
                     }
                     
@@ -448,11 +600,11 @@
             isListening = false;
             if (recognition) recognition.stop();
             document.getElementById('mic-button').classList.remove('listening');
-            document.getElementById('status-text').textContent = 'Tap the microphone and say your items.\\nSay "Add" between items.\\nExample: "Eggs. Add. Milk. Add. Bread."';
+            document.getElementById('status-text').textContent = 'Tap the microphone and say your items.\nSay "Add" between items.\nExample: "Eggs. Add. Milk. Add. Bread."';
         }
 
         function processVoice(transcript) {
-            const items = transcript.split(/\\s+add\\s+/i)
+            const items = transcript.split(/\s+add\s+/i)
                 .map(i => i.trim().replace(/[.,!?]/g, ''))
                 .filter(i => i.length > 0);
             items.forEach(addItem);
@@ -463,7 +615,6 @@
             if (!name) return false;
             const norm = name.toLowerCase().trim();
             
-            // Remove from deleted list if re-adding
             const deletedIdx = deletedItems.findIndex(i => i.toLowerCase() === norm);
             if (deletedIdx !== -1) {
                 deletedItems.splice(deletedIdx, 1);
@@ -491,25 +642,22 @@
             groceryList.push(name);
             itemFrequency[norm] = (itemFrequency[norm] || 0) + 1;
             saveData();
-            if (!silent) showToast(`Added: ${name}`);
+            if (!silent) {
+                showToast(`Added: ${name}`);
+                playSound('yum');
+            }
             updateUI();
             return true;
         }
 
         function removeItem(idx) {
+            playSound('yuck');
             const item = groceryList[idx];
             deletedItems.push(item);
             groceryList.splice(idx, 1);
             saveData();
-            showToast(`Removed: ${item} (will show as deleted when shared)`);
+            showToast(`Removed: ${item}`);
             updateUI();
-        }
-
-        function permanentlyRemoveDeleted(item) {
-            deletedItems = deletedItems.filter(i => i.toLowerCase() !== item.toLowerCase());
-            saveData();
-            updateUI();
-            showToast('Removed permanently');
         }
 
         function restoreItem(item) {
@@ -534,25 +682,21 @@
                 list.innerHTML = '<div class="empty-state">Your list is empty.<br>Add items using voice or quick add!</div>';
             } else {
                 let html = '';
-                
-                // Active items
                 groceryList.forEach((item, i) => {
                     html += `<div class="list-item"><span>${item}</span><button class="delete-btn" onclick="removeItem(${i})">Remove</button></div>`;
                 });
-                
-                // Deleted items (crossed out)
                 deletedItems.forEach(item => {
                     html += `<div class="list-item deleted">
                         <span>${item} (removed by you)</span>
                         <button class="delete-btn" onclick="restoreItem('${item.replace(/'/g, "\\'")}')">Restore</button>
                     </div>`;
                 });
-                
                 list.innerHTML = html;
             }
         }
 
         function updateQuickAdd() {
+            const sixWeeksAgo = Date.now() - (6 * 7 * 24 * 60 * 60 * 1000);
             const sorted = Object.entries(itemFrequency)
                 .sort((a,b) => b[1] - a[1])
                 .map(([item]) => item.charAt(0).toUpperCase() + item.slice(1))
@@ -588,9 +732,9 @@
 
         function emailList() {
             if (groceryList.length === 0) return showToast('List is empty!');
-            const text = groceryList.map((i, idx) => `${idx+1}. ${i}`).join('\\n');
+            const text = groceryList.map((i, idx) => `${idx+1}. ${i}`).join('\n');
             const subject = `Grocery List - ${new Date().toLocaleDateString()}`;
-            const body = `Here's your grocery list:\\n\\n${text}\\n\\nGenerated by Grocery List App`;
+            const body = `Here's your grocery list:\n\n${text}\n\nGenerated by Grocery List App`;
             window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             saveToHistory('emailed');
         }
@@ -601,17 +745,128 @@
                 saveToHistory('reset');
                 groceryList = [];
                 deletedItems = [];
+                shoppingChecked = [];
                 saveData();
                 updateUI();
                 showToast('List reset!');
             }
         }
 
+        function clearOldHistory() {
+            const eightWeeksAgo = Date.now() - (8 * 7 * 24 * 60 * 60 * 1000);
+            const originalLength = history.length;
+            history = history.filter(h => new Date(h.date).getTime() > eightWeeksAgo);
+            
+            const removed = originalLength - history.length;
+            if (removed > 0) {
+                saveData();
+                showToast(`Cleared ${removed} old history entries`);
+                showHistory();
+            } else {
+                showToast('No history older than 8 weeks');
+            }
+        }
+
         function saveToHistory(action) {
             if (groceryList.length === 0 && deletedItems.length === 0) return;
-            history.unshift({ date: new Date().toISOString(), action, items: [...groceryList], deleted: [...deletedItems] });
+            history.unshift({ 
+                date: new Date().toISOString(), 
+                action, 
+                items: [...groceryList], 
+                deleted: [...deletedItems] 
+            });
             if (history.length > 20) history = history.slice(0, 20);
             saveData();
+        }
+
+        // Shopping Man Mode
+        function updateShoppingList() {
+            const container = document.getElementById('shopping-list');
+            const activeItems = groceryList.filter(item => 
+                !deletedItems.some(d => d.toLowerCase() === item.toLowerCase())
+            );
+            
+            if (activeItems.length === 0) {
+                container.innerHTML = '<div style="color: white; text-align: center; padding: 40px; font-size: 18px;">No items to shop for! Add some items first.</div>';
+                return;
+            }
+            
+            container.innerHTML = activeItems.map((item, idx) => {
+                const isChecked = shoppingChecked.includes(item);
+                return `<div class="shopping-item ${isChecked ? 'checked' : ''}">
+                    <input type="checkbox" 
+                           id="shop-${idx}" 
+                           ${isChecked ? 'checked' : ''}
+                           onchange="toggleShoppingItem('${item.replace(/'/g, "\\'")}')">
+                    <span>${item}</span>
+                </div>`;
+            }).join('');
+            
+            updateShoppingProgress();
+        }
+
+        function toggleShoppingItem(item) {
+            const idx = shoppingChecked.indexOf(item);
+            if (idx === -1) {
+                shoppingChecked.push(item);
+                playSound('swoosh');
+            } else {
+                shoppingChecked.splice(idx, 1);
+            }
+            saveData();
+            updateShoppingList();
+        }
+
+        function updateShoppingProgress() {
+            const activeItems = groceryList.filter(item => 
+                !deletedItems.some(d => d.toLowerCase() === item.toLowerCase())
+            );
+            const total = activeItems.length;
+            const checked = shoppingChecked.length;
+            const percentage = total > 0 ? (checked / total) * 100 : 0;
+            
+            const progressFill = document.getElementById('shopping-progress');
+            progressFill.style.width = percentage + '%';
+            progressFill.textContent = `${checked}/${total} items`;
+            
+            if (checked === total && total > 0) {
+                progressFill.style.background = 'linear-gradient(90deg, #FFD700, #FFA500)';
+            } else {
+                progressFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+            }
+        }
+
+        function fulfillFoodDuties() {
+            if (shoppingChecked.length === 0) {
+                showToast('Check off items as you add them to your cart!');
+                return;
+            }
+            
+            const completedParam = encodeURIComponent(JSON.stringify(shoppingChecked));
+            const url = `${window.location.origin}${window.location.pathname}?completed=${completedParam}`;
+            const text = `🦸‍♂️ Shopping Man Saved the Day!\n\nI got: ${shoppingChecked.join(', ')}`;
+            
+            if (navigator.share) {
+                navigator.share({ title: 'Shopping Complete!', text, url })
+                    .then(() => {
+                        shoppingChecked.forEach(item => {
+                            const idx = groceryList.findIndex(i => i === item);
+                            if (idx !== -1) {
+                                deletedItems.push(item);
+                                groceryList.splice(idx, 1);
+                            }
+                        });
+                        shoppingChecked = [];
+                        saveData();
+                        saveToHistory('shopping_completed');
+                        showToast('🦸‍♂️ Food duties fulfilled! Items marked as complete.');
+                        updateUI();
+                        showScreen('voice-screen');
+                    })
+                    .catch(() => fallbackShare(url, text));
+            } else {
+                fallbackShare(url, text);
+            }
         }
 
         function showScreen(id) {
@@ -620,6 +875,7 @@
             if (id === 'edit-screen') updateListDisplay();
             else if (id === 'quick-screen') updateQuickAdd();
             else if (id === 'history-screen') showHistory();
+            else if (id === 'shopping-screen') updateShoppingList();
             updateNavDots();
         }
 
@@ -630,8 +886,8 @@
             } else {
                 list.innerHTML = history.map(h => {
                     const date = new Date(h.date).toLocaleString();
-                    const emoji = h.action === 'emailed' ? '📧' : (h.action === 'shared' ? '📱' : '🔄');
-                    const action = h.action === 'emailed' ? 'Emailed' : (h.action === 'shared' ? 'Shared' : 'Reset');
+                    const emoji = h.action === 'emailed' ? '📧' : (h.action === 'shared' ? '📱' : (h.action === 'shopping_completed' ? '🦸‍♂️' : '🔄'));
+                    const action = h.action === 'emailed' ? 'Emailed' : (h.action === 'shared' ? 'Shared' : (h.action === 'shopping_completed' ? 'Shopping Man!' : 'Reset'));
                     const allItems = [...(h.items || []), ...(h.deleted || []).map(i => `~~${i}~~`)];
                     return `<div class="history-item">
                         <h3>${emoji} ${action}</h3>
@@ -646,7 +902,7 @@
 
         function updateNavDots() {
             document.querySelectorAll('.dot').forEach((d, i) => {
-                const screens = ['voice-screen', 'quick-screen', 'edit-screen'];
+                const screens = ['voice-screen', 'quick-screen', 'edit-screen', 'shopping-screen'];
                 d.classList.toggle('active', document.getElementById(screens[i]).classList.contains('active'));
             });
         }
@@ -670,8 +926,10 @@
             if (diff > 0) {
                 if (active === 'voice-screen') showScreen('quick-screen');
                 else if (active === 'quick-screen') showScreen('edit-screen');
+                else if (active === 'edit-screen') showScreen('shopping-screen');
             } else {
-                if (active === 'edit-screen') showScreen('quick-screen');
+                if (active === 'shopping-screen') showScreen('edit-screen');
+                else if (active === 'edit-screen') showScreen('quick-screen');
                 else if (active === 'quick-screen') showScreen('voice-screen');
             }
         });
