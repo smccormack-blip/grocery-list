@@ -151,7 +151,7 @@
         
         /* Shopping Man Screen */
         .shopping-screen {
-            background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), 
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), 
                         url('Shopping_Man.jpg') center/cover;
             border-radius: 15px;
             padding: 20px;
@@ -290,6 +290,46 @@
             text-align: center;
         }
         @keyframes slideUp { from { bottom: 50px; opacity: 0; } to { bottom: 100px; opacity: 1; } }
+        
+        /* Flying Shopping Man Animation */
+        .flying-hero {
+            position: fixed;
+            bottom: 200px;
+            left: -100px;
+            width: 80px;
+            height: 80px;
+            font-size: 60px;
+            animation: fly 8s linear infinite;
+            z-index: 50;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+        @keyframes fly {
+            0% { left: -100px; }
+            50% { left: 100%; }
+            50.01% { left: 100%; transform: scaleX(-1); }
+            100% { left: -100px; transform: scaleX(-1); }
+        }
+        .follower {
+            position: fixed;
+            bottom: 200px;
+            font-size: 40px;
+            animation: follow 8s linear infinite;
+            z-index: 49;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+        .follower:nth-child(2) { animation-delay: 0.3s; bottom: 190px; }
+        .follower:nth-child(3) { animation-delay: 0.6s; bottom: 210px; }
+        .follower:nth-child(4) { animation-delay: 0.9s; bottom: 195px; }
+        @keyframes follow {
+            0% { left: -120px; opacity: 0; }
+            10% { opacity: 1; }
+            40% { opacity: 1; }
+            50% { left: calc(100% - 50px); opacity: 0; }
+            50.01% { left: calc(100% - 50px); transform: scaleX(-1); opacity: 0; }
+            60% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { left: -120px; transform: scaleX(-1); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -303,9 +343,8 @@
         <div id="voice-screen" class="screen active">
             <h1>🛒 Grocery List</h1>
             <div class="status-text" id="status-text">
-                Tap the microphone and say your items.<br>
-                Say "Add" between items.<br>
-                Example: "Eggs. Add. Milk. Add. Bread."
+                Tap the microphone and say your items. Pause between items. Once you are finished adding items, tap the microphone again to turn it off.<br><br>
+                Swipe right to see quick select screens, list and SHOPPING MAN MODE!
             </div>
             <button class="mic-button" id="mic-button" onclick="toggleVoice()">🎤</button>
             <div class="action-buttons">
@@ -314,6 +353,12 @@
                 </button>
                 <button class="btn btn-share" onclick="shareList()">📱 Share List</button>
             </div>
+            
+            <!-- Flying Shopping Man and Friends -->
+            <div class="flying-hero">🦸‍♂️</div>
+            <div class="follower">🦄</div>
+            <div class="follower">🐱</div>
+            <div class="follower">🦄</div>
         </div>
 
         <div id="quick-screen" class="screen">
@@ -389,9 +434,61 @@
 
         // Sound effects
         const sounds = {
-            yum: () => { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 800; gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1); osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.1); },
-            yuck: () => { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 200; gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2); osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2); },
-            swoosh: () => { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3); osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3); }
+            yum: () => {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance('Yum!');
+                    utterance.rate = 1.5;
+                    utterance.pitch = 1.2;
+                    utterance.volume = 0.8;
+                    speechSynthesis.speak(utterance);
+                } else {
+                    // Fallback beep
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 800;
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.1);
+                }
+            },
+            yuck: () => {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance('Yuck!');
+                    utterance.rate = 1.2;
+                    utterance.pitch = 0.8;
+                    utterance.volume = 0.8;
+                    speechSynthesis.speak(utterance);
+                } else {
+                    // Fallback beep
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 200;
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.2);
+                }
+            },
+            swoosh: () => {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(600, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.3);
+            }
         };
 
         function playSound(type) {
@@ -600,14 +697,19 @@
             isListening = false;
             if (recognition) recognition.stop();
             document.getElementById('mic-button').classList.remove('listening');
-            document.getElementById('status-text').textContent = 'Tap the microphone and say your items.\nSay "Add" between items.\nExample: "Eggs. Add. Milk. Add. Bread."';
+            document.getElementById('status-text').textContent = 'Tap the microphone and say your items. Pause between items. Once you are finished adding items, tap the microphone again to turn it off.\n\nSwipe right to see quick select screens, list and SHOPPING MAN MODE!';
         }
 
         function processVoice(transcript) {
-            const items = transcript.split(/\s+add\s+/i)
-                .map(i => i.trim().replace(/[.,!?]/g, ''))
-                .filter(i => i.length > 0);
-            items.forEach(addItem);
+            // Split on common punctuation and natural pauses
+            const items = transcript.split(/[.,;!?]|\s{2,}/)
+                .map(i => i.trim().replace(/^(and|add|also|plus)\s+/i, ''))
+                .filter(i => i.length > 2);
+            
+            items.forEach(item => {
+                if (item.length > 0) addItem(item);
+            });
+            
             if (items.length > 0) currentTranscript = '';
         }
 
