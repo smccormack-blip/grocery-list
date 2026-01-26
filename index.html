@@ -13,6 +13,33 @@
             background: linear-gradient(to bottom, #f5f5f0, #e8e8e0);
             min-height: 100vh;
         }
+        
+        /* List Selector */
+        .list-selector {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .list-selector select {
+            font-size: 18px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid white;
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            min-width: 200px;
+        }
+        .list-selector select:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.5);
+        }
+        
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .screen { display: none; }
         .screen.active { display: block; animation: fadeIn 0.3s; }
@@ -291,6 +318,42 @@
         }
         @keyframes slideUp { from { bottom: 50px; opacity: 0; } to { bottom: 100px; opacity: 1; } }
         
+        /* Victory Video Modal */
+        .victory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .victory-modal.show {
+            display: flex;
+        }
+        .victory-modal video {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(255,215,0,0.5);
+        }
+        .victory-modal .skip-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
         /* Flying Shopping Man Animation */
         .flying-hero {
             position: fixed;
@@ -334,6 +397,13 @@
 </head>
 <body>
     <div class="container">
+        <div class="list-selector">
+            <select id="list-type" onchange="switchList()">
+                <option value="home">🏠 Home List</option>
+                <option value="office">💼 Office List</option>
+            </select>
+        </div>
+        
         <div class="permission-banner" id="permission-banner">
             <h3>🎤 Microphone Access Needed</h3>
             <p>To use voice input, this app needs permission to access your microphone.</p>
@@ -419,6 +489,14 @@
         <div class="dot" onclick="showScreen('shopping-screen')">🦸</div>
     </div>
 
+    <!-- Victory Video Modal -->
+    <div class="victory-modal" id="victory-modal">
+        <video id="victory-video" autoplay playsinline>
+            <source src="victory.mp4" type="video/mp4">
+        </video>
+        <button class="skip-button" onclick="closeVictoryVideo()">Skip</button>
+    </div>
+
     <script>
         let groceryList = [];
         let deletedItems = [];
@@ -429,8 +507,37 @@
         let recognition = null;
         let currentTranscript = '';
         let micPermitted = false;
+        let currentListType = 'home'; // Current list: 'home' or 'office'
 
         const defaultQuickItems = ['Eggs','Milk','Bread','Butter','Cheese','Chicken','Bananas','Apples','Lettuce','Tomatoes','Onions','Potatoes','Rice','Pasta','Coffee'];
+
+        function getCurrentListType() {
+            // Get from URL hash, or from localStorage, or default to 'home'
+            const hash = window.location.hash.slice(1);
+            if (hash === 'home' || hash === 'office') {
+                return hash;
+            }
+            return localStorage.getItem('currentListType') || 'home';
+        }
+
+        function setCurrentListType(type) {
+            currentListType = type;
+            localStorage.setItem('currentListType', type);
+            window.location.hash = type;
+            document.getElementById('list-type').value = type;
+        }
+
+        function switchList() {
+            const newType = document.getElementById('list-type').value;
+            setCurrentListType(newType);
+            loadData();
+            updateUI();
+            showToast(`Switched to ${newType === 'home' ? '🏠 Home' : '💼 Office'} list`);
+        }
+
+        function getStorageKey(key) {
+            return `${key}_${currentListType}`;
+        }
 
         // Sound effects
         let yummyAudio = null;
@@ -488,6 +595,8 @@
         }
 
         function init() {
+            currentListType = getCurrentListType();
+            setCurrentListType(currentListType);
             loadData();
             initSounds();
             checkMicPermission();
@@ -498,25 +607,35 @@
         }
 
         function loadData() {
-            groceryList = JSON.parse(localStorage.getItem('groceryList') || '[]');
-            deletedItems = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-            itemFrequency = JSON.parse(localStorage.getItem('itemFrequency') || '{}');
-            history = JSON.parse(localStorage.getItem('groceryHistory') || '[]');
-            shoppingChecked = JSON.parse(localStorage.getItem('shoppingChecked') || '[]');
+            groceryList = JSON.parse(localStorage.getItem(getStorageKey('groceryList')) || '[]');
+            deletedItems = JSON.parse(localStorage.getItem(getStorageKey('deletedItems')) || '[]');
+            itemFrequency = JSON.parse(localStorage.getItem(getStorageKey('itemFrequency')) || '{}');
+            history = JSON.parse(localStorage.getItem(getStorageKey('groceryHistory')) || '[]');
+            shoppingChecked = JSON.parse(localStorage.getItem(getStorageKey('shoppingChecked')) || '[]');
         }
 
         function saveData() {
-            localStorage.setItem('groceryList', JSON.stringify(groceryList));
-            localStorage.setItem('deletedItems', JSON.stringify(deletedItems));
-            localStorage.setItem('itemFrequency', JSON.stringify(itemFrequency));
-            localStorage.setItem('groceryHistory', JSON.stringify(history));
-            localStorage.setItem('shoppingChecked', JSON.stringify(shoppingChecked));
+            localStorage.setItem(getStorageKey('groceryList'), JSON.stringify(groceryList));
+            localStorage.setItem(getStorageKey('deletedItems'), JSON.stringify(deletedItems));
+            localStorage.setItem(getStorageKey('itemFrequency'), JSON.stringify(itemFrequency));
+            localStorage.setItem(getStorageKey('groceryHistory'), JSON.stringify(history));
+            localStorage.setItem(getStorageKey('shoppingChecked'), JSON.stringify(shoppingChecked));
         }
 
         function handleIncomingShare() {
             const params = new URLSearchParams(window.location.search);
             const shared = params.get('items');
             const sharedDeleted = params.get('deleted');
+            const sharedListType = params.get('list');
+            
+            // Switch to the correct list if specified
+            if (sharedListType && (sharedListType === 'home' || sharedListType === 'office')) {
+                if (sharedListType !== currentListType) {
+                    currentListType = sharedListType;
+                    setCurrentListType(sharedListType);
+                    loadData(); // Load the correct list's data
+                }
+            }
             
             if (shared) {
                 try {
@@ -547,14 +666,15 @@
                     saveData();
                     
                     if (added > 0 || incomingDeleted.length > 0) {
-                        let msg = '';
-                        if (added > 0) msg += `Added ${added} item(s). `;
+                        const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
+                        let msg = `${listName} list updated: `;
+                        if (added > 0) msg += `${added} item(s) added. `;
                         if (incomingDeleted.length > 0) msg += `${incomingDeleted.length} item(s) marked as deleted.`;
                         showToast(msg.trim());
                         updateUI();
                     }
                     
-                    window.history.replaceState({}, '', window.location.pathname);
+                    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
                 } catch (e) { console.error(e); }
             }
         }
@@ -562,30 +682,46 @@
         function handleShoppingCompletion() {
             const params = new URLSearchParams(window.location.search);
             const completed = params.get('completed');
+            const sharedListType = params.get('list');
+            
+            // Switch to the correct list if specified
+            if (sharedListType && (sharedListType === 'home' || sharedListType === 'office')) {
+                if (sharedListType !== currentListType) {
+                    currentListType = sharedListType;
+                    setCurrentListType(sharedListType);
+                    loadData(); // Load the correct list's data
+                }
+            }
             
             if (completed) {
                 try {
                     const completedItems = JSON.parse(decodeURIComponent(completed));
                     const itemList = completedItems.join(', ');
-                    const confirmed = confirm(`🦸‍♂️ Shopping Man Saved the Day!\n\nClear these items from your list?\n\n${itemList}\n\nTap OK to clear them, or Cancel to keep them.`);
+                    const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
                     
-                    if (confirmed) {
-                        completedItems.forEach(item => {
-                            const normItem = item.toLowerCase();
-                            // Remove from active list
-                            const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
-                            if (idx !== -1) {
-                                groceryList.splice(idx, 1);
-                            }
-                            // Also remove from deleted list (clean slate after shopping)
-                            deletedItems = deletedItems.filter(d => d.toLowerCase() !== normItem);
-                        });
-                        saveData();
-                        showToast(`🦸‍♂️ Cleared ${completedItems.length} completed item(s)!`);
-                        updateUI();
-                    }
+                    // Show victory video first!
+                    showVictoryVideo(() => {
+                        // After video, show confirmation dialog
+                        const confirmed = confirm(`🦸‍♂️ Shopping Man Saved the Day!\n\n${listName} list - Clear these items?\n\n${itemList}\n\nTap OK to clear them, or Cancel to keep them.`);
+                        
+                        if (confirmed) {
+                            completedItems.forEach(item => {
+                                const normItem = item.toLowerCase();
+                                // Remove from active list
+                                const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
+                                if (idx !== -1) {
+                                    groceryList.splice(idx, 1);
+                                }
+                            });
+                            // BUGFIX: Clear ALL deleted items when accepting completion (including mistakes)
+                            deletedItems = [];
+                            saveData();
+                            showToast(`🦸‍♂️ Cleared ${completedItems.length} completed item(s)!`);
+                            updateUI();
+                        }
+                    });
                     
-                    window.history.replaceState({}, '', window.location.pathname);
+                    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
                 } catch (e) { console.error(e); }
             }
         }
@@ -595,13 +731,15 @@
             
             const itemsParam = encodeURIComponent(JSON.stringify(groceryList));
             const deletedParam = deletedItems.length > 0 ? `&deleted=${encodeURIComponent(JSON.stringify(deletedItems))}` : '';
-            const url = `${window.location.origin}${window.location.pathname}?items=${itemsParam}${deletedParam}`;
+            const listParam = `&list=${currentListType}`;
+            const url = `${window.location.origin}${window.location.pathname}?items=${itemsParam}${deletedParam}${listParam}#${currentListType}`;
             
+            const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
             const activeItems = groceryList.filter(i => !deletedItems.some(d => d.toLowerCase() === i.toLowerCase()));
-            const text = `My grocery list: ${activeItems.join(', ')}${deletedItems.length > 0 ? ` (${deletedItems.length} removed)` : ''}`;
+            const text = `${listName} grocery list: ${activeItems.join(', ')}${deletedItems.length > 0 ? ` (${deletedItems.length} removed)` : ''}`;
             
             if (navigator.share) {
-                navigator.share({ title: 'Grocery List', text, url })
+                navigator.share({ title: `${listName} Grocery List`, text, url })
                     .then(() => { saveToHistory('shared'); showToast('Shared!'); })
                     .catch(() => fallbackShare(url, text));
             } else {
@@ -704,7 +842,8 @@
             'ice cream': /\bice\s+cream\b/gi,
             'peanut butter': /\bpeanut\s+butter\b/gi,
             'orange juice': /\borange\s+juice\b/gi,
-            'apple juice': /\bapple\s+juice\b/gi
+            'apple juice': /\bapple\s+juice\b/gi,
+            'bouillon cubes': /\b(bouillon|bowling)\s+cubes\b/gi
         };
 
         function processVoice(transcript) {
@@ -973,8 +1112,11 @@
             }
             
             const completedParam = encodeURIComponent(JSON.stringify(shoppingChecked));
-            const url = `${window.location.origin}${window.location.pathname}?completed=${completedParam}`;
-            const text = `🦸‍♂️ Shopping Man Saved the Day!\n\nI got: ${shoppingChecked.join(', ')}`;
+            const listParam = `&list=${currentListType}`;
+            const url = `${window.location.origin}${window.location.pathname}?completed=${completedParam}${listParam}#${currentListType}`;
+            
+            const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
+            const text = `🦸‍♂️ Shopping Man Saved the Day!\n\n${listName} - I got: ${shoppingChecked.join(', ')}`;
             
             if (navigator.share) {
                 navigator.share({ title: 'Shopping Complete!', text, url })
@@ -985,13 +1127,13 @@
                             if (idx !== -1) {
                                 groceryList.splice(idx, 1);
                             }
-                            // Clear from deleted items too (clean slate)
-                            deletedItems = deletedItems.filter(d => d.toLowerCase() !== normItem);
                         });
+                        // BUGFIX: Clear ALL deleted items when shopping completes (including mistakes)
+                        deletedItems = [];
                         shoppingChecked = [];
                         saveData();
                         saveToHistory('shopping_completed');
-                        showToast('🦸‍♂️ Food duties fulfilled! Items marked as complete.');
+                        showToast('🦸‍♂️ Food duties fulfilled! List cleaned up.');
                         updateUI();
                         showScreen('voice-screen');
                     })
@@ -1047,6 +1189,47 @@
             toast.textContent = msg;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Victory Video functions
+        function showVictoryVideo(callback) {
+            const modal = document.getElementById('victory-modal');
+            const video = document.getElementById('victory-video');
+            
+            modal.classList.add('show');
+            video.currentTime = 0;
+            
+            // Try to play with sound
+            video.muted = false;
+            video.play().catch(() => {
+                // If autoplay with sound fails, try muted
+                video.muted = true;
+                video.play();
+            });
+            
+            // Auto-close when video ends
+            video.onended = () => {
+                closeVictoryVideo();
+                if (callback) callback();
+            };
+            
+            // Store callback for skip button
+            window.victoryCallback = callback;
+        }
+
+        function closeVictoryVideo() {
+            const modal = document.getElementById('victory-modal');
+            const video = document.getElementById('victory-video');
+            
+            modal.classList.remove('show');
+            video.pause();
+            video.currentTime = 0;
+            
+            // Call the callback if it exists
+            if (window.victoryCallback) {
+                window.victoryCallback();
+                window.victoryCallback = null;
+            }
         }
 
         let touchX = 0;
