@@ -119,6 +119,8 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .list-item span { font-size: 18px; color: #2c3e50; }
+        .list-item.deleted { opacity: 0.6; }
+        .list-item.deleted span { text-decoration: line-through; color: #999; }
         .delete-btn {
             background: #e74c3c;
             color: white;
@@ -198,11 +200,6 @@
             <button onclick="requestMicrophonePermission()">Grant Microphone Access</button>
         </div>
 
-        <div class="info-banner">
-            <h3>📱 How Sharing Works</h3>
-            <p>Tap "Share List" to send your items to your wife. She opens the link and items merge automatically!</p>
-        </div>
-
         <div id="voice-screen" class="screen active">
             <h1>🛒 Grocery List</h1>
             <div class="status-text" id="status-text">
@@ -261,6 +258,7 @@
 
     <script>
         let groceryList = [];
+        let deletedItems = [];
         let itemFrequency = {};
         let history = [];
         let isListening = false;
@@ -280,12 +278,14 @@
 
         function loadData() {
             groceryList = JSON.parse(localStorage.getItem('groceryList') || '[]');
+            deletedItems = JSON.parse(localStorage.getItem('deletedItems') || '[]');
             itemFrequency = JSON.parse(localStorage.getItem('itemFrequency') || '{}');
             history = JSON.parse(localStorage.getItem('groceryHistory') || '[]');
         }
 
         function saveData() {
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
+            localStorage.setItem('deletedItems', JSON.stringify(deletedItems));
             localStorage.setItem('itemFrequency', JSON.stringify(itemFrequency));
             localStorage.setItem('groceryHistory', JSON.stringify(history));
         }
@@ -293,24 +293,67 @@
         function handleIncomingShare() {
             const params = new URLSearchParams(window.location.search);
             const shared = params.get('items');
+            const sharedDeleted = params.get('deleted');
+            
             if (shared) {
                 try {
-                    const items = JSON.parse(decodeURIComponent(shared));
+                    const incomingItems = JSON.parse(decodeURIComponent(shared));
+                    const incomingDeleted = sharedDeleted ? JSON.parse(decodeURIComponent(sharedDeleted)) : [];
+                    
+                    // Smart merge logic
                     let added = 0;
-                    items.forEach(item => { if (addItem(item, true)) added++; });
-                    if (added > 0) {
-                        showToast(`Added ${added} item(s) from shared list!`);
+                    let restored = 0;
+                    
+                    // Add items from incoming list that we don't have
+                    incomingItems.forEach(item => {
+                        const normItem = item.toLowerCase().trim();
+                        const existsInList = groceryList.some(i => i.toLowerCase() === normItem);
+                        const wasDeleted = deletedItems.some(i => i.toLowerCase() === normItem);
+                        
+                        if (!existsInList && !wasDeleted) {
+                            groceryList.push(item);
+                            added++;
+                        } else if (wasDeleted && !existsInList) {
+                            // They have it but we deleted it - show as deleted
+                            deletedItems = deletedItems.filter(i => i.toLowerCase() !== normItem);
+                            deletedItems.push(item);
+                        }
+                    });
+                    
+                    // Mark items as deleted if they deleted them
+                    incomingDeleted.forEach(item => {
+                        const normItem = item.toLowerCase().trim();
+                        const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
+                        if (idx !== -1) {
+                            deletedItems.push(groceryList[idx]);
+                            groceryList.splice(idx, 1);
+                        }
+                    });
+                    
+                    saveData();
+                    
+                    if (added > 0 || incomingDeleted.length > 0) {
+                        let msg = '';
+                        if (added > 0) msg += `Added ${added} item(s). `;
+                        if (incomingDeleted.length > 0) msg += `${incomingDeleted.length} item(s) marked as deleted.`;
+                        showToast(msg.trim());
                         updateUI();
                     }
+                    
                     window.history.replaceState({}, '', window.location.pathname);
                 } catch (e) { console.error(e); }
             }
         }
 
         function shareList() {
-            if (groceryList.length === 0) return showToast('List is empty!');
-            const url = `${window.location.origin}${window.location.pathname}?items=${encodeURIComponent(JSON.stringify(groceryList))}`;
-            const text = `My grocery list: ${groceryList.join(', ')}`;
+            if (groceryList.length === 0 && deletedItems.length === 0) return showToast('List is empty!');
+            
+            const itemsParam = encodeURIComponent(JSON.stringify(groceryList));
+            const deletedParam = deletedItems.length > 0 ? `&deleted=${encodeURIComponent(JSON.stringify(deletedItems))}` : '';
+            const url = `${window.location.origin}${window.location.pathname}?items=${itemsParam}${deletedParam}`;
+            
+            const activeItems = groceryList.filter(i => !deletedItems.some(d => d.toLowerCase() === i.toLowerCase()));
+            const text = `My grocery list: ${activeItems.join(', ')}${deletedItems.length > 0 ? ` (${deletedItems.length} removed)` : ''}`;
             
             if (navigator.share) {
                 navigator.share({ title: 'Grocery List', text, url })
@@ -420,6 +463,12 @@
             if (!name) return false;
             const norm = name.toLowerCase().trim();
             
+            // Remove from deleted list if re-adding
+            const deletedIdx = deletedItems.findIndex(i => i.toLowerCase() === norm);
+            if (deletedIdx !== -1) {
+                deletedItems.splice(deletedIdx, 1);
+            }
+            
             if (groceryList.some(i => i.toLowerCase() === norm)) {
                 if (!silent) showToast(`"${name}" already on list`);
                 return false;
@@ -449,14 +498,31 @@
 
         function removeItem(idx) {
             const item = groceryList[idx];
+            deletedItems.push(item);
             groceryList.splice(idx, 1);
             saveData();
-            showToast(`Removed: ${item}`);
+            showToast(`Removed: ${item} (will show as deleted when shared)`);
             updateUI();
         }
 
+        function permanentlyRemoveDeleted(item) {
+            deletedItems = deletedItems.filter(i => i.toLowerCase() !== item.toLowerCase());
+            saveData();
+            updateUI();
+            showToast('Removed permanently');
+        }
+
+        function restoreItem(item) {
+            deletedItems = deletedItems.filter(i => i.toLowerCase() !== item.toLowerCase());
+            groceryList.push(item);
+            saveData();
+            updateUI();
+            showToast(`Restored: ${item}`);
+        }
+
         function updateUI() {
-            document.getElementById('item-count').textContent = groceryList.length;
+            const activeCount = groceryList.length;
+            document.getElementById('item-count').textContent = activeCount;
             updateListDisplay();
             updateQuickAdd();
             updateNavDots();
@@ -464,12 +530,25 @@
 
         function updateListDisplay() {
             const list = document.getElementById('current-list');
-            if (groceryList.length === 0) {
+            if (groceryList.length === 0 && deletedItems.length === 0) {
                 list.innerHTML = '<div class="empty-state">Your list is empty.<br>Add items using voice or quick add!</div>';
             } else {
-                list.innerHTML = groceryList.map((item, i) => 
-                    `<div class="list-item"><span>${item}</span><button class="delete-btn" onclick="removeItem(${i})">Remove</button></div>`
-                ).join('');
+                let html = '';
+                
+                // Active items
+                groceryList.forEach((item, i) => {
+                    html += `<div class="list-item"><span>${item}</span><button class="delete-btn" onclick="removeItem(${i})">Remove</button></div>`;
+                });
+                
+                // Deleted items (crossed out)
+                deletedItems.forEach(item => {
+                    html += `<div class="list-item deleted">
+                        <span>${item} (removed by you)</span>
+                        <button class="delete-btn" onclick="restoreItem('${item.replace(/'/g, "\\'")}')">Restore</button>
+                    </div>`;
+                });
+                
+                list.innerHTML = html;
             }
         }
 
@@ -517,10 +596,11 @@
         }
 
         function resetList() {
-            if (groceryList.length === 0) return showToast('List already empty!');
-            if (confirm('Clear all items?')) {
+            if (groceryList.length === 0 && deletedItems.length === 0) return showToast('List already empty!');
+            if (confirm('Clear all items (including deleted)?')) {
                 saveToHistory('reset');
                 groceryList = [];
+                deletedItems = [];
                 saveData();
                 updateUI();
                 showToast('List reset!');
@@ -528,8 +608,8 @@
         }
 
         function saveToHistory(action) {
-            if (groceryList.length === 0) return;
-            history.unshift({ date: new Date().toISOString(), action, items: [...groceryList] });
+            if (groceryList.length === 0 && deletedItems.length === 0) return;
+            history.unshift({ date: new Date().toISOString(), action, items: [...groceryList], deleted: [...deletedItems] });
             if (history.length > 20) history = history.slice(0, 20);
             saveData();
         }
@@ -552,12 +632,13 @@
                     const date = new Date(h.date).toLocaleString();
                     const emoji = h.action === 'emailed' ? '📧' : (h.action === 'shared' ? '📱' : '🔄');
                     const action = h.action === 'emailed' ? 'Emailed' : (h.action === 'shared' ? 'Shared' : 'Reset');
+                    const allItems = [...(h.items || []), ...(h.deleted || []).map(i => `~~${i}~~`)];
                     return `<div class="history-item">
                         <h3>${emoji} ${action}</h3>
                         <p><strong>Date:</strong> ${date}</p>
-                        <p><strong>Items (${h.items.length}):</strong></p>
-                        <ul>${h.items.slice(0,10).map(i => `<li>${i}</li>`).join('')}
-                        ${h.items.length > 10 ? `<li><em>...and ${h.items.length-10} more</em></li>` : ''}</ul>
+                        <p><strong>Items (${h.items?.length || 0} active, ${h.deleted?.length || 0} deleted):</strong></p>
+                        <ul>${allItems.slice(0,10).map(i => `<li>${i}</li>`).join('')}
+                        ${allItems.length > 10 ? `<li><em>...and ${allItems.length-10} more</em></li>` : ''}</ul>
                     </div>`;
                 }).join('');
             }
