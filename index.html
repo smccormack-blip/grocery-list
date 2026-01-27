@@ -698,6 +698,58 @@
             from { transform: scale(1); }
             to { transform: scale(1.1); }
         }
+        
+        /* Tutorial Victory Video Styles */
+        .tutorial-video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .tutorial-video-container video {
+            max-width: 90%;
+            max-height: 70%;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+        .tutorial-play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .tutorial-play-overlay.hidden {
+            display: none;
+        }
+        .tutorial-play-button {
+            background: linear-gradient(135deg, #ffd700, #ffa500);
+            color: #000;
+            border: 2px solid #fff;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255,215,0,0.4);
+        }
+        .tutorial-skip-video {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid white;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 11px;
+            cursor: pointer;
+            z-index: 11;
+        }
+        
         .flying-item {
             position: absolute;
             font-size: 20px;
@@ -842,6 +894,7 @@
                 <div class="step-dot" data-step="2"></div>
                 <div class="step-dot" data-step="3"></div>
                 <div class="step-dot" data-step="4"></div>
+                <div class="step-dot" data-step="5"></div>
             </div>
 
             <div class="tutorial-phones">
@@ -862,7 +915,18 @@
                         <div class="phone-header">🛒 Grocery List</div>
                         <div class="phone-list" id="phone-b-list"></div>
                         <div class="celebration-overlay" id="celebration-overlay">
-                            <div class="celebration-text">🦸‍♂️ Shopping Man<br>Saves the Day! 🦸‍♂️</div>
+                            <div class="celebration-text" id="celebration-text">🦸‍♂️ Shopping Man<br>Saves the Day! 🦸‍♂️</div>
+                            <div class="tutorial-video-container" id="tutorial-video-container" style="display: none;">
+                                <video id="tutorial-victory-video" playsinline>
+                                    <source src="victory.mp4" type="video/mp4">
+                                </video>
+                                <div class="tutorial-play-overlay" id="tutorial-play-overlay">
+                                    <button class="tutorial-play-button" onclick="playTutorialVideo()">
+                                        🎥 Tap to See the Victory!
+                                    </button>
+                                </div>
+                                <button class="tutorial-skip-video" id="tutorial-skip-video" onclick="stopTutorialVideo()" style="display: none;">Skip</button>
+                            </div>
                         </div>
                     </div>
                     <div class="phone-label">👤 Person B</div>
@@ -1880,7 +1944,18 @@
                 showArrow: false,
                 phoneABtn: null,
                 phoneBBtn: { text: "🦸‍♂️ FULFILLED!", class: "success" },
-                celebration: true
+                celebration: true,
+                showVideo: false
+            },
+            {
+                description: "🎥 <strong>Victory Celebration!</strong> When Shopping Man completes the mission, everyone gets to see an epic victory video! Tap the button to watch the celebration. This is what makes shopping heroic! 🦸‍♂️",
+                phoneA: [],
+                phoneB: [],
+                showArrow: false,
+                phoneABtn: null,
+                phoneBBtn: null,
+                celebration: true,
+                showVideo: true
             }
         ];
 
@@ -2010,12 +2085,78 @@
 
             // Handle celebration overlay
             const celebrationOverlay = document.getElementById('celebration-overlay');
+            const celebrationText = document.getElementById('celebration-text');
+            const videoContainer = document.getElementById('tutorial-video-container');
+            
             celebrationOverlay.classList.remove('show');
+            
             if (step.celebration) {
                 setTimeout(() => {
                     celebrationOverlay.classList.add('show');
+                    
+                    // Show video for step 5, text for step 4
+                    if (step.showVideo) {
+                        celebrationText.style.display = 'none';
+                        videoContainer.style.display = 'flex';
+                        
+                        // Reset video and play overlay
+                        const video = document.getElementById('tutorial-victory-video');
+                        const playOverlay = document.getElementById('tutorial-play-overlay');
+                        const skipButton = document.getElementById('tutorial-skip-video');
+                        
+                        video.pause();
+                        video.currentTime = 0;
+                        playOverlay.classList.remove('hidden');
+                        skipButton.style.display = 'none';
+                    } else {
+                        celebrationText.style.display = 'block';
+                        videoContainer.style.display = 'none';
+                    }
                 }, 2000);
+            } else {
+                celebrationText.style.display = 'block';
+                videoContainer.style.display = 'none';
             }
+        }
+
+        // Tutorial video functions
+        function playTutorialVideo() {
+            const video = document.getElementById('tutorial-victory-video');
+            const playOverlay = document.getElementById('tutorial-play-overlay');
+            const skipButton = document.getElementById('tutorial-skip-video');
+            
+            // Hide play button
+            playOverlay.classList.add('hidden');
+            
+            // Show skip button
+            skipButton.style.display = 'block';
+            
+            // Play video with sound
+            video.muted = false;
+            video.play().catch(() => {
+                // If fails, try muted
+                video.muted = true;
+                video.play();
+            });
+            
+            // Auto-reset when video ends
+            video.onended = () => {
+                video.currentTime = 0;
+                video.pause();
+                playOverlay.classList.remove('hidden');
+                skipButton.style.display = 'none';
+            };
+        }
+
+        function stopTutorialVideo() {
+            const video = document.getElementById('tutorial-victory-video');
+            const playOverlay = document.getElementById('tutorial-play-overlay');
+            const skipButton = document.getElementById('tutorial-skip-video');
+            
+            video.pause();
+            video.currentTime = 0;
+            playOverlay.classList.remove('hidden');
+            skipButton.style.display = 'none';
         }
 
         // Close tutorial on escape key
