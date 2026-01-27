@@ -140,14 +140,6 @@
         .list-item.deleted { opacity: 0.6; }
         .list-item.deleted span { text-decoration: line-through; color: #999; }
         .delete-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .perm-delete-btn {
             background: #8b0000;
             color: white;
             border: none;
@@ -155,6 +147,18 @@
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
+        }
+        .remove-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
         }
         .manual-add { display: flex; gap: 10px; margin-bottom: 20px; }
         .manual-add input {
@@ -578,6 +582,7 @@
         let itemOwnership = {}; // Track who added each item
         let permanentDeletions = {}; // Track permanently deleted items
         let deviceId = localStorage.getItem('deviceId') || generateDeviceId();
+        let lastSharedTimestamp = {}; // Track when each item was last shared
 
         const defaultQuickItems = ['Eggs','Milk','Bread','Butter','Cheese','Chicken','Bananas','Apples','Lettuce','Tomatoes','Onions','Potatoes','Rice','Pasta','Coffee'];
 
@@ -740,6 +745,7 @@
             shoppingChecked = JSON.parse(localStorage.getItem(getStorageKey('shoppingChecked')) || '[]');
             itemOwnership = JSON.parse(localStorage.getItem(getStorageKey('itemOwnership')) || '{}');
             permanentDeletions = JSON.parse(localStorage.getItem(getStorageKey('permanentDeletions')) || '{}');
+            lastSharedTimestamp = JSON.parse(localStorage.getItem(getStorageKey('lastSharedTimestamp')) || '{}');
         }
 
         function saveData() {
@@ -750,6 +756,7 @@
             localStorage.setItem(getStorageKey('shoppingChecked'), JSON.stringify(shoppingChecked));
             localStorage.setItem(getStorageKey('itemOwnership'), JSON.stringify(itemOwnership));
             localStorage.setItem(getStorageKey('permanentDeletions'), JSON.stringify(permanentDeletions));
+            localStorage.setItem(getStorageKey('lastSharedTimestamp'), JSON.stringify(lastSharedTimestamp));
         }
 
         function handleIncomingShare() {
@@ -865,6 +872,14 @@
         function shareList() {
             if (groceryList.length === 0 && deletedItems.length === 0) return showToast('List is empty!');
             
+            // Mark all items as shared with current timestamp
+            const now = Date.now();
+            groceryList.forEach(item => {
+                const norm = item.toLowerCase().trim();
+                lastSharedTimestamp[norm] = now;
+            });
+            saveData();
+            
             const itemsParam = encodeURIComponent(JSON.stringify(groceryList));
             const deletedParam = deletedItems.length > 0 ? `&deleted=${encodeURIComponent(JSON.stringify(deletedItems))}` : '';
             const ownershipParam = `&ownership=${encodeURIComponent(JSON.stringify(itemOwnership))}`;
@@ -877,7 +892,7 @@
             
             if (navigator.share) {
                 navigator.share({ title: `${listName} Grocery List`, text, url })
-                    .then(() => { saveToHistory('shared'); showToast('Shared!'); })
+                    .then(() => { saveToHistory('shared'); showToast('Shared!'); updateUI(); })
                     .catch(() => fallbackShare(url, text));
             } else {
                 fallbackShare(url, text);
@@ -975,7 +990,7 @@
         const multiWordItems = {
             'cat food': /\bcat\s+food\b/gi,
             'dog food': /\bdog\s+food\b/gi,
-            'half and half': /\bhalf\s+and\s+half\b/gi,
+            'half and half': /\bhalf(\s+and\s+half|\s+half)\b/gi,  // Handles "half and half" or "half half"
             'ice cream': /\bice\s+cream\b/gi,
             'peanut butter': /\bpeanut\s+butter\b/gi,
             'orange juice': /\borange\s+juice\b/gi,
@@ -1113,19 +1128,29 @@
                 groceryList.forEach((item, i) => {
                     const norm = item.toLowerCase().trim();
                     const isMyItem = itemOwnership[norm] === deviceId;
-                    const buttonText = isMyItem ? 'Permanently Delete' : 'Remove';
-                    const buttonClass = isMyItem ? 'perm-delete-btn' : 'delete-btn';
-                    const onClick = isMyItem ? `permanentlyDeleteItem(${i})` : `removeItem(${i})`;
+                    const hasBeenShared = lastSharedTimestamp[norm] !== undefined;
                     
-                    html += `<div class="list-item">
-                        <span>${item}</span>
-                        <button class="${buttonClass}" onclick="${onClick}">${buttonText}</button>
-                    </div>`;
+                    // Show both Delete and Remove for your unshared items
+                    // Show only Remove for your shared items or others' items
+                    if (isMyItem && !hasBeenShared) {
+                        html += `<div class="list-item">
+                            <span>${item}</span>
+                            <div class="button-group">
+                                <button class="delete-btn" onclick="permanentlyDeleteItem(${i})">Delete</button>
+                                <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `<div class="list-item">
+                            <span>${item}</span>
+                            <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
+                        </div>`;
+                    }
                 });
                 deletedItems.forEach(item => {
                     html += `<div class="list-item deleted">
                         <span>${item}</span>
-                        <button class="delete-btn" onclick="restoreItem('${item.replace(/'/g, "\\'")}')">Restore</button>
+                        <button class="remove-btn" onclick="restoreItem('${item.replace(/'/g, "\\'")}')">Restore</button>
                     </div>`;
                 });
                 list.innerHTML = html;
