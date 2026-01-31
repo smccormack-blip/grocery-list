@@ -1364,15 +1364,10 @@
             }
         }
 
+        const legalAudio = new Audio('output.mp3');
         function playLegalMumboJumbo() {
-            const audio = new Audio('output.mp3');
-            audio.play().catch(() => {
-                showToast('Tap again to play audio');
-                document.addEventListener('click', function playOnce() {
-                    audio.play();
-                    document.removeEventListener('click', playOnce);
-                }, { once: true });
-            });
+            legalAudio.currentTime = 0;
+            legalAudio.play().catch(() => showToast('Unable to play audio'));
         }
 
         async function checkMicPermission() {
