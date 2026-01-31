@@ -846,6 +846,7 @@
             <div class="quick-items" id="quick-items"></div>
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="addQuickItems()">Add Selected</button>
+                <button class="btn btn-secondary" onclick="updateQuickAdd(); showToast('Quick add list refreshed!')">Refresh List</button>
                 <button class="btn btn-secondary" onclick="showScreen('voice-screen')">Back</button>
             </div>
         </div>
@@ -1403,6 +1404,8 @@
             recognition.continuous = true;
             recognition.interimResults = true;
 
+            let voiceDebounceTimer = null;
+
             recognition.onresult = e => {
                 let interim = '', final = '';
                 for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -1412,7 +1415,9 @@
                 }
                 if (final) {
                     currentTranscript += final;
-                    processVoice(currentTranscript);
+                    // Debounce to allow multi-word phrases like "half and half" to arrive
+                    clearTimeout(voiceDebounceTimer);
+                    voiceDebounceTimer = setTimeout(() => processVoice(currentTranscript), 800);
                 }
                 document.getElementById('status-text').textContent = interim || currentTranscript || 'Listening...';
             };
@@ -1564,14 +1569,17 @@
             const item = groceryList[idx];
             const norm = item.toLowerCase().trim();
             
-            // Track permanent deletion
-            permanentDeletions[norm] = (permanentDeletions[norm] || 0) + 1;
-            
+            // Remove from quick add: zero out frequency so it won't appear
+            // until the item is added again in the future
+            itemFrequency[norm] = 0;
+            permanentDeletions[norm] = 0;
+
             // Remove from list
             groceryList.splice(idx, 1);
-            
+
             // Remove from ownership
             delete itemOwnership[norm];
+            delete itemQuantities[norm];
             
             playSound('yuck');
             saveData();
