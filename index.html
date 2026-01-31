@@ -161,6 +161,35 @@
             display: flex;
             gap: 8px;
         }
+        .qty-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        .qty-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid #667eea;
+            background: white;
+            color: #667eea;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+        .qty-num {
+            font-size: 14px;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 16px;
+            text-align: center;
+        }
         .manual-add { display: flex; gap: 10px; margin-bottom: 20px; }
         .manual-add input {
             flex: 1;
@@ -833,8 +862,7 @@
                 <button class="btn btn-success" onclick="emailList()">📧 Email</button>
                 <button class="btn btn-danger" onclick="resetList()">Reset</button>
                 <button class="btn btn-secondary" onclick="showScreen('history-screen')">History</button>
-                <button class="btn btn-secondary" onclick="showScreen('voice-screen')">Back</button>
-                <button class="btn btn-legal" onclick="playLegalMumboJumbo()">Legal Mumbo Jumbo</button>
+                <button class="btn btn-legal" style="width:100%" onclick="playLegalMumboJumbo()">Legal Mumbo Jumbo</button>
             </div>
         </div>
 
@@ -963,7 +991,8 @@
         let micPermitted = false;
         let currentListType = 'home'; // Current list: 'home' or 'office'
         let itemOwnership = {}; // Track who added each item
-        let permanentDeletions = {}; // Track permanently deleted items
+        let permanentDeletions = {};
+        let itemQuantities = {}; // Track permanently deleted items
         let deviceId = localStorage.getItem('deviceId') || generateDeviceId();
         let lastSharedTimestamp = {}; // Track when each item was last shared
 
@@ -1129,6 +1158,7 @@
             itemOwnership = JSON.parse(localStorage.getItem(getStorageKey('itemOwnership')) || '{}');
             permanentDeletions = JSON.parse(localStorage.getItem(getStorageKey('permanentDeletions')) || '{}');
             lastSharedTimestamp = JSON.parse(localStorage.getItem(getStorageKey('lastSharedTimestamp')) || '{}');
+            itemQuantities = JSON.parse(localStorage.getItem(getStorageKey('itemQuantities')) || '{}');
         }
 
         function saveData() {
@@ -1140,6 +1170,7 @@
             localStorage.setItem(getStorageKey('itemOwnership'), JSON.stringify(itemOwnership));
             localStorage.setItem(getStorageKey('permanentDeletions'), JSON.stringify(permanentDeletions));
             localStorage.setItem(getStorageKey('lastSharedTimestamp'), JSON.stringify(lastSharedTimestamp));
+            localStorage.setItem(getStorageKey('itemQuantities'), JSON.stringify(itemQuantities));
         }
 
         function handleIncomingShare() {
@@ -1151,7 +1182,7 @@
             const sharedListType = params.get('list');
 
             // Decode compressed format or fall back to legacy format
-            let incomingItems = null, incomingDeleted = [], incomingOwnership = {};
+            let incomingItems = null, incomingDeleted = [], incomingOwnership = {}, incomingQuantities = {};
             let resolvedListType = sharedListType;
 
             if (compressedShare) {
@@ -1159,6 +1190,7 @@
                     const data = JSON.parse(LZString.decompressFromEncodedURIComponent(compressedShare));
                     incomingItems = data.i || [];
                     incomingDeleted = data.d || [];
+                    incomingQuantities = data.q || {};
                     resolvedListType = data.l || sharedListType;
                 } catch (e) { console.error('Failed to decompress share data:', e); }
             } else if (shared) {
@@ -1193,7 +1225,15 @@
                             if (incomingOwnership[normItem]) {
                                 itemOwnership[normItem] = incomingOwnership[normItem];
                             }
+                            // Merge quantities
+                            if (incomingQuantities[normItem]) {
+                                itemQuantities[normItem] = incomingQuantities[normItem];
+                            }
                             added++;
+                        }
+                        // Update quantity for existing items if sender changed it
+                        if (existsInList && incomingQuantities[normItem]) {
+                            itemQuantities[normItem] = incomingQuantities[normItem];
                         }
                     });
                     
@@ -1298,13 +1338,14 @@
             
             const shareData = { i: groceryList, l: currentListType };
             if (deletedItems.length > 0) shareData.d = deletedItems;
+            const qtyEntries = Object.entries(itemQuantities);
+            if (qtyEntries.length > 0) shareData.q = itemQuantities;
             const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(shareData));
             const url = `${window.location.origin}${window.location.pathname}?s=${compressed}#${currentListType}`;
             
             const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
-            const activeItems = groceryList.filter(i => !deletedItems.some(d => d.toLowerCase() === i.toLowerCase()));
-            const text = `${listName} grocery list: ${activeItems.join(', ')}${deletedItems.length > 0 ? ` (${deletedItems.length} removed)` : ''}`;
-            
+            const text = `${listName} grocery list`;
+
             if (navigator.share) {
                 navigator.share({ title: `${listName} Grocery List`, text, url })
                     .then(() => { saveToHistory('shared'); showToast('Shared!'); updateUI(); })
@@ -1500,6 +1541,20 @@
             return true;
         }
 
+        function changeQty(idx, delta) {
+            const norm = groceryList[idx].toLowerCase().trim();
+            const current = itemQuantities[norm] || 1;
+            const newQty = current + delta;
+            if (newQty < 1) return;
+            if (newQty === 1) {
+                delete itemQuantities[norm];
+            } else {
+                itemQuantities[norm] = newQty;
+            }
+            saveData();
+            updateUI();
+        }
+
         function removeItem(idx) {
             playSound('yuck');
             const item = groceryList[idx];
@@ -1555,12 +1610,15 @@
                     const norm = item.toLowerCase().trim();
                     const isMyItem = itemOwnership[norm] === deviceId;
                     const hasBeenShared = lastSharedTimestamp[norm] !== undefined;
-                    
+                    const qty = itemQuantities[norm] || 1;
+                    const qtyLabel = qty > 1 ? `${qty} ` : '';
+                    const qtyControls = `<span class="qty-controls"><button class="qty-btn" onclick="changeQty(${i},-1)">&minus;</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="changeQty(${i},1)">+</button></span>`;
+
                     // Show both Delete and Remove for your unshared items
                     // Show only Remove for your shared items or others' items
                     if (isMyItem && !hasBeenShared) {
                         html += `<div class="list-item">
-                            <span>${item}</span>
+                            <span>${qtyLabel}${item}</span>${qtyControls}
                             <div class="button-group">
                                 <button class="delete-btn" onclick="permanentlyDeleteItem(${i})">Delete</button>
                                 <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
@@ -1568,7 +1626,7 @@
                         </div>`;
                     } else {
                         html += `<div class="list-item">
-                            <span>${item}</span>
+                            <span>${qtyLabel}${item}</span>${qtyControls}
                             <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
                         </div>`;
                     }
@@ -1614,6 +1672,7 @@
                 if (addItem(cb.value, true)) added++;
                 cb.checked = false;
             });
+            if (added > 0) playSound('yum');
             showToast(added > 0 ? `Added ${added} item(s)` : 'No items selected or already on list');
         }
 
@@ -1642,6 +1701,7 @@
                 deletedItems = [];
                 shoppingChecked = [];
                 lastSharedTimestamp = {};
+                itemQuantities = {};
                 saveData();
                 updateUI();
                 showToast('List reset!');
