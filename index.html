@@ -93,6 +93,7 @@
         .btn-share { background: #3498db; color: white; }
         .btn-success { background: #27ae60; color: white; }
         .btn-danger { background: #e74c3c; color: white; }
+        .btn-legal { background: #f39c12; color: #666; }
         .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
         .permission-banner {
             background: #fff3cd;
@@ -833,6 +834,7 @@
                 <button class="btn btn-danger" onclick="resetList()">Reset</button>
                 <button class="btn btn-secondary" onclick="showScreen('history-screen')">History</button>
                 <button class="btn btn-secondary" onclick="showScreen('voice-screen')">Back</button>
+                <button class="btn btn-legal" onclick="playLegalMumboJumbo()">Legal Mumbo Jumbo</button>
             </div>
         </div>
 
@@ -1321,6 +1323,17 @@
             }
         }
 
+        function playLegalMumboJumbo() {
+            const audio = new Audio('output.mp3');
+            audio.play().catch(() => {
+                showToast('Tap again to play audio');
+                document.addEventListener('click', function playOnce() {
+                    audio.play();
+                    document.removeEventListener('click', playOnce);
+                }, { once: true });
+            });
+        }
+
         async function checkMicPermission() {
             try {
                 if (navigator.permissions) {
@@ -1628,6 +1641,7 @@
                 groceryList = [];
                 deletedItems = [];
                 shoppingChecked = [];
+                lastSharedTimestamp = {};
                 saveData();
                 updateUI();
                 showToast('List reset!');
