@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <title>Grocery List - Shopping Man Edition</title>
+    <script type="module" src="store.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -802,15 +806,70 @@
         .btn-tutorial:hover {
             box-shadow: 0 0 15px rgba(255,215,0,0.5);
         }
+
+        /* ---- Shared list edition ---- */
+        .list-title { font-size: 18px; padding: 10px 20px; border-radius: 10px; border: 2px solid white;
+            background: white; color: #667eea; font-weight: bold; cursor: pointer; min-width: 200px; }
+        .list-title::after { content: ' ▾'; }
+        .sync-badge { margin-top: 6px; font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 600; }
+        .sync-badge.live { color: #b9f6ca; }
+        .sync-badge.offline { color: #ffe082; }
+        .sync-badge.syncing { color: #e3f2fd; }
+        .demo-banner { display: none; background: #fff3cd; color: #7a5b00; font-size: 13px; padding: 8px 14px;
+            text-align: center; border-radius: 10px; margin-bottom: 10px; }
+        .demo-banner.show { display: block; }
+        .item-main { flex: 1; min-width: 0; }
+        .item-meta { font-size: 12px; color: #8a8f98; margin-top: 2px; }
+        .list-item.deleted .item-meta { text-decoration: none; }
+        .list-item.bought span { color: #2e7d32; }
+        .crossed-header { margin: 18px 4px 8px; font-size: 13px; font-weight: 700; color: #8a8f98;
+            text-transform: uppercase; letter-spacing: 0.04em; }
+        .quick-item.on-list label { color: #aaa; }
+        .toast { z-index: 3000; display: flex; align-items: center; justify-content: center; }
+        .list-item { gap: 8px; }
+        .shopping-item { cursor: pointer; }
+        .cart-by { font-size: 13px; opacity: 0.8; }
+        .activity-day { margin: 18px 4px 6px; font-weight: 700; color: #2c3e50; font-size: 14px; }
+        .activity-row { display: flex; gap: 10px; align-items: flex-start; background: white; border-radius: 10px;
+            padding: 10px 12px; margin-bottom: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-size: 15px; color: #2c3e50; }
+        .activity-icon { flex: none; }
+        .activity-text { flex: 1; line-height: 1.4; }
+        .activity-text s { color: #999; }
+        .activity-time { flex: none; font-size: 12px; color: #999; }
+        .muted { color: #999; font-size: 13px; }
+        .toast-action { margin-left: 12px; background: none; border: none; color: #ffd54f; font-weight: 700;
+            font-size: 15px; cursor: pointer; text-transform: uppercase; }
+        .sheet-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000;
+            align-items: flex-end; justify-content: center; }
+        .sheet-modal.show { display: flex; }
+        .sheet { background: #fafaf7; width: 100%; max-width: 600px; max-height: 92vh; overflow-y: auto;
+            border-radius: 20px 20px 0 0; padding: 22px 18px 28px; }
+        .sheet h2 { color: #2c3e50; font-size: 22px; margin-bottom: 6px; text-align: center; }
+        .sheet .btn { width: 100%; margin-top: 8px; }
+        .sheet-note { color: #666; text-align: center; font-size: 14px; margin-bottom: 12px; line-height: 1.4; }
+        .sheet-section { background: white; border-radius: 14px; padding: 14px; margin-top: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .sheet-label { font-size: 13px; color: #8a8f98; font-weight: 600; margin-bottom: 6px; }
+        .sheet-big { font-size: 20px; font-weight: 700; color: #2c3e50; }
+        .sheet-small { font-size: 14px; color: #555; margin-top: 4px; }
+        .sheet-input, .sheet-row input { width: 100%; font-size: 17px; padding: 12px; border: 2px solid #ddd; border-radius: 10px; }
+        .sheet-row { display: flex; gap: 8px; }
+        .sheet-row button { border: none; background: #667eea; color: white; border-radius: 10px; padding: 0 16px; font-weight: 600; }
+        .code { font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.08em; }
+        .sheet-divider { text-align: center; color: #aaa; margin: 10px 0 0; font-size: 13px; }
+        .sheet-error { color: #c0392b; text-align: center; margin-top: 12px; min-height: 18px; font-size: 14px; }
+        .sheet-close { display: block; margin: 16px auto 0; background: none; border: none; color: #667eea;
+            font-size: 16px; font-weight: 600; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="list-selector">
-            <select id="list-type" onchange="switchList()">
-                <option value="home">🏠 Home List</option>
-                <option value="office">💼 Office List</option>
-            </select>
+            <button id="list-title" class="list-title" onclick="openLists()">🛒 Shopping Man</button>
+            <div id="sync-badge" class="sync-badge">…</div>
+        </div>
+        <div class="demo-banner" id="demo-banner">
+            Demo mode: Firebase isn't set up yet, so this list lives only on this phone. See SETUP.md.
         </div>
         
         <div class="permission-banner" id="permission-banner">
@@ -830,7 +889,7 @@
                 <button class="btn btn-secondary" onclick="showScreen('edit-screen')">
                     View List (<span id="item-count">0</span>)
                 </button>
-                <button class="btn btn-share" onclick="shareList()">📱 Share List</button>
+                <button class="btn btn-share" onclick="inviteToList()">📨 Invite to List</button>
                 <button class="btn btn-tutorial" onclick="openTutorial()">❓ Tutorial</button>
             </div>
 
@@ -859,16 +918,16 @@
             </div>
             <div id="current-list"></div>
             <div class="action-buttons">
-                <button class="btn btn-share" onclick="shareList()">📱 Share</button>
+                <button class="btn btn-secondary" onclick="showScreen('history-screen')">📜 Activity</button>
+                <button class="btn btn-share" onclick="inviteToList()">📨 Invite</button>
                 <button class="btn btn-success" onclick="emailList()">📧 Email</button>
                 <button class="btn btn-danger" onclick="resetList()">Reset</button>
-                <button class="btn btn-secondary" onclick="showScreen('history-screen')">History</button>
                 <button class="btn btn-legal" style="width:100%" onclick="playLegalMumboJumbo()">Legal Mumbo Jumbo</button>
             </div>
         </div>
 
         <div id="history-screen" class="screen">
-            <h1>Past Lists</h1>
+            <h1>Family Activity</h1>
             <div id="history-list"></div>
             <div class="action-buttons">
                 <button class="btn btn-danger" onclick="clearOldHistory()">Clear Old History (8+ weeks)</button>
@@ -900,6 +959,40 @@
         <div class="dot" onclick="showScreen('shopping-screen')">🦸</div>
     </div>
 
+    <!-- Join / start a list -->
+    <div class="sheet-modal" id="join-modal">
+        <div class="sheet">
+            <h2>🦸‍♂️ Welcome to Shopping Man</h2>
+            <p class="sheet-note">Everyone on a list sees the same items, live. No account needed.</p>
+            <div class="sheet-section">
+                <div class="sheet-label">Your name (shown to your family)</div>
+                <input id="join-name" class="sheet-input" placeholder="e.g. Shane" autocomplete="given-name">
+            </div>
+            <div class="sheet-section">
+                <div class="sheet-label">Join a list someone shared with you</div>
+                <input id="join-code" class="sheet-input code" placeholder="ABCD-2345" autocapitalize="characters" autocomplete="off">
+                <button class="btn btn-primary" onclick="joinWithCode()">Join list</button>
+            </div>
+            <div class="sheet-divider">or</div>
+            <div class="sheet-section">
+                <div class="sheet-label">Start a new list</div>
+                <input id="join-list-name" class="sheet-input" placeholder="List name, e.g. Family Groceries">
+                <button class="btn btn-secondary" onclick="createNewList()">Start new list</button>
+            </div>
+            <div id="join-error" class="sheet-error"></div>
+            <button id="join-cancel" class="sheet-close" onclick="closeJoin()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Lists & people -->
+    <div class="sheet-modal" id="lists-modal">
+        <div class="sheet">
+            <h2>Lists &amp; people</h2>
+            <div id="lists-body"></div>
+            <button class="sheet-close" onclick="closeLists()">Done</button>
+        </div>
+    </div>
+
     <!-- Victory Video Modal -->
     <div class="victory-modal" id="victory-modal">
         <div class="victory-container">
@@ -919,7 +1012,7 @@
     <div class="tutorial-modal" id="tutorial-modal">
         <div class="tutorial-container">
             <div class="tutorial-title">📱 How It Works</div>
-            <div class="tutorial-subtitle">Share your grocery list between two people</div>
+            <div class="tutorial-subtitle">One live list for the whole family</div>
 
             <div class="tutorial-step-indicator">
                 <div class="step-dot active" data-step="1"></div>
@@ -966,7 +1059,7 @@
             </div>
 
             <div class="tutorial-description" id="tutorial-description">
-                Welcome! This app lets two people share a grocery list. Let's see how it works!
+                Welcome! Your whole family shares one live grocery list. Let's see how it works!
             </div>
 
             <div class="tutorial-nav">
@@ -978,24 +1071,37 @@
     </div>
 
     <script>
-        // LZString compression library (MIT License) - https://github.com/pieroxy/lz-string
-        var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
+        /* ============================================================
+           Shopping Man — shared list edition
+           Everything is stored in one shared list (see store.js).
+           Each item keeps its own trail: who added it, who removed
+           or bought it, and when. Removed/bought items stay visible
+           (crossed out) until the next shopping trip is completed.
+           ============================================================ */
 
-        let groceryList = [];
-        let deletedItems = [];
-        let shoppingChecked = [];
-        let itemFrequency = {};
-        let history = [];
+        const LS = {
+            name: 'sm2_name',
+            lists: 'sm2_lists',          // [{ code, name }]
+            current: 'sm2_current',      // code of the list on screen
+            seenTrip: 'sm2_seen_trip',   // last trip celebrated on this phone (+ user id)
+            imported: 'sm2_imported',    // old on-phone list already uploaded
+        };
+        const KEEP_CROSSED_DAYS = 7;
+
+        let me = { uid: null, name: localStorage.getItem(LS.name) || '' };
+        let listCode = localStorage.getItem(LS.current) || null;
+        let listName = '';
+        let items = {};          // id -> item
+        let activity = [];       // newest first
+        let members = [];
+        let firstItemsLoad = true;
+        let sessionStart = Date.now();
+        let syncState = { fromCache: false, pending: false };
+
         let isListening = false;
         let recognition = null;
         let currentTranscript = '';
         let micPermitted = false;
-        let currentListType = 'home'; // Current list: 'home' or 'office'
-        let itemOwnership = {}; // Track who added each item
-        let permanentDeletions = {};
-        let itemQuantities = {}; // Track permanently deleted items
-        let deviceId = localStorage.getItem('deviceId') || generateDeviceId();
-        let lastSharedTimestamp = {}; // Track when each item was last shared
 
         const defaultQuickItems = ['Eggs','Milk','Bread','Butter','Cheese','Chicken','Bananas','Apples','Lettuce','Tomatoes','Onions','Potatoes','Rice','Pasta','Coffee'];
 
@@ -1006,21 +1112,21 @@
             'lettuce': 'produce', 'tomatoes': 'produce', 'onions': 'produce', 'potatoes': 'produce',
             'carrots': 'produce', 'celery': 'produce', 'peppers': 'produce', 'cucumbers': 'produce',
             'broccoli': 'produce', 'cauliflower': 'produce', 'spinach': 'produce', 'avocados': 'produce',
-            
+
             // Dairy
             'milk': 'dairy', 'eggs': 'dairy', 'butter': 'dairy', 'cheese': 'dairy',
             'yogurt': 'dairy', 'cream': 'dairy', 'half and half': 'dairy', 'sour cream': 'dairy',
             'cottage cheese': 'dairy', 'cream cheese': 'dairy',
-            
+
             // Meat
             'chicken': 'meat', 'beef': 'meat', 'pork': 'meat', 'turkey': 'meat',
             'bacon': 'meat', 'sausage': 'meat', 'ham': 'meat', 'meat': 'meat',
             'ground beef': 'meat', 'steak': 'meat', 'fish': 'meat', 'salmon': 'meat',
-            
+
             // Bakery
             'bread': 'bakery', 'bagels': 'bakery', 'muffins': 'bakery', 'croissants': 'bakery',
             'donuts': 'bakery', 'rolls': 'bakery', 'tortillas': 'bakery',
-            
+
             // Grocery (everything else)
             'rice': 'grocery', 'pasta': 'grocery', 'cereal': 'grocery', 'coffee': 'grocery',
             'tea': 'grocery', 'sugar': 'grocery', 'flour': 'grocery', 'oil': 'grocery',
@@ -1044,49 +1150,67 @@
 
         const categoryOrder = ['produce', 'dairy', 'meat', 'bakery', 'grocery'];
 
-        function generateDeviceId() {
-            const id = 'device_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('deviceId', id);
-            return id;
+        /* ---------- small helpers ---------- */
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function norm(name) { return name.toLowerCase().trim().replace(/\s+/g, ' '); }
+
+        // Same item name -> same id, so two people adding "eggs" offline don't make two rows.
+        function itemId(name) {
+            const n = norm(name);
+            const slug = n.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            if (slug) return slug.slice(0, 100);
+            return 'x' + Array.from(n).map(c => c.codePointAt(0).toString(16)).join('');
         }
 
         function getCategory(itemName) {
-            const normalized = itemName.toLowerCase().trim();
-            return itemCategories[normalized] || 'grocery';
+            return itemCategories[norm(itemName)] || 'grocery';
         }
 
-        function getCurrentListType() {
-            // Get from URL hash, or from localStorage, or default to 'home'
-            const hash = window.location.hash.slice(1);
-            if (hash === 'home' || hash === 'office') {
-                return hash;
-            }
-            return localStorage.getItem('currentListType') || 'home';
+        function ago(ms) {
+            if (!ms) return '';
+            const s = Math.max(0, (Date.now() - ms) / 1000);
+            if (s < 60) return 'just now';
+            if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+            if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+            const d = Math.floor(s / 86400);
+            return d === 1 ? 'yesterday' : `${d}d ago`;
         }
 
-        function setCurrentListType(type) {
-            currentListType = type;
-            localStorage.setItem('currentListType', type);
-            window.location.hash = type;
-            document.getElementById('list-type').value = type;
+        function who(name, uid) { return uid === me.uid ? 'you' : (name || 'someone'); }
+
+        function display(item) { return item.name.charAt(0).toUpperCase() + item.name.slice(1); }
+
+        function activeItems() {
+            return Object.values(items).filter(i => i.status === 'active')
+                .sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
         }
 
-        function switchList() {
-            const newType = document.getElementById('list-type').value;
-            setCurrentListType(newType);
-            loadData();
-            updateUI();
-            showToast(`Switched to ${newType === 'home' ? '🏠 Home' : '💼 Office'} list`);
+        function crossedItems() {
+            const cutoff = Date.now() - KEEP_CROSSED_DAYS * 86400000;
+            return Object.values(items)
+                .filter(i => (i.status === 'removed' && i.removedAt > cutoff) ||
+                             (i.status === 'bought' && i.boughtAt > cutoff))
+                .sort((a, b) => (b.removedAt || b.boughtAt || 0) - (a.removedAt || a.boughtAt || 0));
         }
 
-        function getStorageKey(key) {
-            return `${key}_${currentListType}`;
+        function getLists() { try { return JSON.parse(localStorage.getItem(LS.lists)) || []; } catch (e) { return []; } }
+        function saveLists(l) { localStorage.setItem(LS.lists, JSON.stringify(l)); }
+
+        function commit(ops) { return store.commit(listCode, ops); }
+
+        function logEntry(type, extra = {}) {
+            return { col: 'activity', data: { type, by: me.name, uid: me.uid, at: Date.now(), ...extra } };
         }
 
-        // Sound effects
+        /* ---------- sounds ---------- */
+
         let yummyAudio = null;
         let yuckAudio = null;
-        
+
         function initSounds() {
             try {
                 yummyAudio = new Audio('yummy.m4a');
@@ -1097,27 +1221,13 @@
                 console.log('Audio init error:', e);
             }
         }
-        
+
         const sounds = {
             yum: () => {
-                try {
-                    if (yummyAudio) {
-                        yummyAudio.currentTime = 0;
-                        yummyAudio.play().catch(e => console.log('Yum play failed:', e));
-                    }
-                } catch(e) {
-                    console.log('Yum error:', e);
-                }
+                if (yummyAudio) { yummyAudio.currentTime = 0; yummyAudio.play().catch(() => {}); }
             },
             yuck: () => {
-                try {
-                    if (yuckAudio) {
-                        yuckAudio.currentTime = 0;
-                        yuckAudio.play().catch(e => console.log('Yuck play failed:', e));
-                    }
-                } catch(e) {
-                    console.log('Yuck error:', e);
-                }
+                if (yuckAudio) { yuckAudio.currentTime = 0; yuckAudio.play().catch(() => {}); }
             },
             swoosh: () => {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1138,238 +1248,246 @@
             try { sounds[type](); } catch(e) { console.log('Sound error:', e); }
         }
 
-        function init() {
-            currentListType = getCurrentListType();
-            setCurrentListType(currentListType);
-            loadData();
+        /* ---------- start-up ---------- */
+
+        async function init() {
             initSounds();
             checkMicPermission();
             setupVoiceRecognition();
+            registerServiceWorker();
+            window.addEventListener('online', renderSyncBadge);
+            window.addEventListener('offline', renderSyncBadge);
+            window.addEventListener('store-error', () => showToast('⚠️ A change could not be saved. Check you are still on this list.'));
+
+            if (store.mode === 'local') document.getElementById('demo-banner').classList.add('show');
+
+            try {
+                const r = await store.ready();
+                me.uid = r.uid;
+            } catch (e) {
+                console.error(e);
+                showToast('Could not start sync — check your connection and reload.');
+                return;
+            }
+
+            const joinParam = storeUtils.normalizeCode(new URLSearchParams(location.search).get('join'));
+            if (joinParam) {
+                history.replaceState({}, '', location.pathname);
+                if (!getLists().some(l => l.code === joinParam)) return openJoin(joinParam);
+                listCode = joinParam;
+            }
+
+            const lists = getLists();
+            if (!me.name || lists.length === 0) return openJoin();
+            if (!lists.some(l => l.code === listCode)) listCode = lists[0].code;
+            openList(listCode);
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+                navigator.serviceWorker.register('sw.js').catch(e => console.log('SW failed', e));
+            }
+        }
+
+        function openList(code) {
+            const entry = getLists().find(l => l.code === code);
+            listCode = code;
+            listName = entry ? entry.name : 'Shared list';
+            localStorage.setItem(LS.current, code);
+            items = {}; activity = []; members = []; firstItemsLoad = true;
+            document.getElementById('list-title').textContent = `🛒 ${listName}`;
             updateUI();
-            handleIncomingShare();
-            handleShoppingCompletion();
-        }
-
-        function loadData() {
-            groceryList = JSON.parse(localStorage.getItem(getStorageKey('groceryList')) || '[]');
-            deletedItems = JSON.parse(localStorage.getItem(getStorageKey('deletedItems')) || '[]');
-            itemFrequency = JSON.parse(localStorage.getItem(getStorageKey('itemFrequency')) || '{}');
-            history = JSON.parse(localStorage.getItem(getStorageKey('groceryHistory')) || '[]');
-            shoppingChecked = JSON.parse(localStorage.getItem(getStorageKey('shoppingChecked')) || '[]');
-            itemOwnership = JSON.parse(localStorage.getItem(getStorageKey('itemOwnership')) || '{}');
-            permanentDeletions = JSON.parse(localStorage.getItem(getStorageKey('permanentDeletions')) || '{}');
-            lastSharedTimestamp = JSON.parse(localStorage.getItem(getStorageKey('lastSharedTimestamp')) || '{}');
-            itemQuantities = JSON.parse(localStorage.getItem(getStorageKey('itemQuantities')) || '{}');
-        }
-
-        function saveData() {
-            localStorage.setItem(getStorageKey('groceryList'), JSON.stringify(groceryList));
-            localStorage.setItem(getStorageKey('deletedItems'), JSON.stringify(deletedItems));
-            localStorage.setItem(getStorageKey('itemFrequency'), JSON.stringify(itemFrequency));
-            localStorage.setItem(getStorageKey('groceryHistory'), JSON.stringify(history));
-            localStorage.setItem(getStorageKey('shoppingChecked'), JSON.stringify(shoppingChecked));
-            localStorage.setItem(getStorageKey('itemOwnership'), JSON.stringify(itemOwnership));
-            localStorage.setItem(getStorageKey('permanentDeletions'), JSON.stringify(permanentDeletions));
-            localStorage.setItem(getStorageKey('lastSharedTimestamp'), JSON.stringify(lastSharedTimestamp));
-            localStorage.setItem(getStorageKey('itemQuantities'), JSON.stringify(itemQuantities));
-        }
-
-        function handleIncomingShare() {
-            const params = new URLSearchParams(window.location.search);
-            const compressedShare = params.get('s');
-            const shared = params.get('items');
-            const sharedDeleted = params.get('deleted');
-            const sharedOwnership = params.get('ownership');
-            const sharedListType = params.get('list');
-
-            // Decode compressed format or fall back to legacy format
-            let incomingItems = null, incomingDeleted = [], incomingOwnership = {}, incomingQuantities = {};
-            let resolvedListType = sharedListType;
-
-            if (compressedShare) {
-                try {
-                    const data = JSON.parse(LZString.decompressFromEncodedURIComponent(compressedShare));
-                    incomingItems = data.i || [];
-                    incomingDeleted = data.d || [];
-                    incomingQuantities = data.q || {};
-                    resolvedListType = data.l || sharedListType;
-                } catch (e) { console.error('Failed to decompress share data:', e); }
-            } else if (shared) {
-                try {
-                    incomingItems = JSON.parse(decodeURIComponent(shared));
-                    incomingDeleted = sharedDeleted ? JSON.parse(decodeURIComponent(sharedDeleted)) : [];
-                    incomingOwnership = sharedOwnership ? JSON.parse(decodeURIComponent(sharedOwnership)) : {};
-                } catch (e) { console.error('Failed to parse legacy share data:', e); }
-            }
-
-            // Switch to the correct list if specified
-            if (resolvedListType && (resolvedListType === 'home' || resolvedListType === 'office')) {
-                if (resolvedListType !== currentListType) {
-                    currentListType = resolvedListType;
-                    setCurrentListType(resolvedListType);
-                    loadData(); // Load the correct list's data
-                }
-            }
-
-            if (incomingItems) {
-                try {
-                    
-                    let added = 0;
-                    incomingItems.forEach(item => {
-                        const normItem = item.toLowerCase().trim();
-                        const existsInList = groceryList.some(i => i.toLowerCase() === normItem);
-                        const wasDeleted = deletedItems.some(i => i.toLowerCase() === normItem);
-                        
-                        if (!existsInList && !wasDeleted) {
-                            groceryList.push(item);
-                            // Merge ownership data
-                            if (incomingOwnership[normItem]) {
-                                itemOwnership[normItem] = incomingOwnership[normItem];
-                            }
-                            // Merge quantities
-                            if (incomingQuantities[normItem]) {
-                                itemQuantities[normItem] = incomingQuantities[normItem];
-                            }
-                            added++;
-                        }
-                        // Update quantity for existing items if sender changed it
-                        if (existsInList && incomingQuantities[normItem]) {
-                            itemQuantities[normItem] = incomingQuantities[normItem];
-                        }
-                    });
-                    
-                    incomingDeleted.forEach(item => {
-                        const normItem = item.toLowerCase().trim();
-                        const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
-                        if (idx !== -1) {
-                            deletedItems.push(groceryList[idx]);
-                            groceryList.splice(idx, 1);
-                        }
-                    });
-                    
-                    saveData();
-                    
-                    if (added > 0 || incomingDeleted.length > 0) {
-                        const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
-                        let msg = `${listName} list updated: `;
-                        if (added > 0) msg += `${added} item(s) added. `;
-                        if (incomingDeleted.length > 0) msg += `${incomingDeleted.length} item(s) marked as deleted.`;
-                        showToast(msg.trim());
-                        updateUI();
-                    }
-                    
-                    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-                } catch (e) { console.error(e); }
-            }
-        }
-
-        function handleShoppingCompletion() {
-            const params = new URLSearchParams(window.location.search);
-            const compressedCompletion = params.get('sc');
-            const completed = params.get('completed');
-            const sharedListType = params.get('list');
-
-            // Decode compressed format or fall back to legacy format
-            let completedItems = null;
-            let resolvedListType = sharedListType;
-
-            if (compressedCompletion) {
-                try {
-                    const data = JSON.parse(LZString.decompressFromEncodedURIComponent(compressedCompletion));
-                    completedItems = data.c || [];
-                    resolvedListType = data.l || sharedListType;
-                } catch (e) { console.error('Failed to decompress completion data:', e); }
-            } else if (completed) {
-                try {
-                    completedItems = JSON.parse(decodeURIComponent(completed));
-                } catch (e) { console.error('Failed to parse legacy completion data:', e); }
-            }
-
-            // Switch to the correct list if specified
-            if (resolvedListType && (resolvedListType === 'home' || resolvedListType === 'office')) {
-                if (resolvedListType !== currentListType) {
-                    currentListType = resolvedListType;
-                    setCurrentListType(resolvedListType);
-                    loadData(); // Load the correct list's data
-                }
-            }
-
-            if (completedItems && completedItems.length > 0) {
-                try {
-                    const itemList = completedItems.join(', ');
-                    const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
-                    
-                    // Show victory video first!
-                    showVictoryVideo(() => {
-                        // After video, show confirmation dialog
-                        const confirmed = confirm(`🦸‍♂️ Shopping Man Saved the Day!\n\n${listName} list - Clear these items?\n\n${itemList}\n\nTap OK to clear them, or Cancel to keep them.`);
-                        
-                        if (confirmed) {
-                            completedItems.forEach(item => {
-                                const normItem = item.toLowerCase();
-                                // Remove from active list
-                                const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
-                                if (idx !== -1) {
-                                    groceryList.splice(idx, 1);
-                                }
-                            });
-                            // BUGFIX: Clear ALL deleted items when accepting completion (including mistakes)
-                            deletedItems = [];
-                            saveData();
-                            showToast(`🦸‍♂️ Cleared ${completedItems.length} completed item(s)!`);
-                            updateUI();
-                        }
-                    });
-                    
-                    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-                } catch (e) { console.error(e); }
-            }
-        }
-
-        function shareList() {
-            if (groceryList.length === 0 && deletedItems.length === 0) return showToast('List is empty!');
-            
-            // Mark all items as shared with current timestamp
-            const now = Date.now();
-            groceryList.forEach(item => {
-                const norm = item.toLowerCase().trim();
-                lastSharedTimestamp[norm] = now;
+            store.watch(code, {
+                onItems(rows) {
+                    items = {};
+                    rows.forEach(r => { items[r.id] = r; });
+                    updateUI();
+                    if (firstItemsLoad) { firstItemsLoad = false; offerImportOfOldList(); }
+                },
+                onActivity(rows) {
+                    activity = rows;
+                    if (document.getElementById('history-screen').classList.contains('active')) showHistory();
+                    checkForNewTrip();
+                },
+                onMembers(rows) {
+                    members = rows;
+                    // Pick up a renamed list from the server copy if we ever store it there.
+                },
+                onStatus(s) { syncState = s; renderSyncBadge(); },
             });
-            saveData();
-            
-            const shareData = { i: groceryList, l: currentListType };
-            if (deletedItems.length > 0) shareData.d = deletedItems;
-            const qtyEntries = Object.entries(itemQuantities);
-            if (qtyEntries.length > 0) shareData.q = itemQuantities;
-            const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(shareData));
-            const url = `${window.location.origin}${window.location.pathname}?s=${compressed}#${currentListType}`;
-            
-            const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
-            const text = `${listName} grocery list`;
+        }
 
+        function renderSyncBadge() {
+            const el = document.getElementById('sync-badge');
+            if (store.mode === 'local') { el.textContent = 'Demo mode · this phone only'; el.className = 'sync-badge demo'; return; }
+            if (!navigator.onLine || syncState.fromCache) {
+                el.textContent = syncState.pending ? '○ Offline · changes saved, will sync' : '○ Offline · showing saved list';
+                el.className = 'sync-badge offline';
+            } else if (syncState.pending) {
+                el.textContent = '↻ Syncing…'; el.className = 'sync-badge syncing';
+            } else {
+                el.textContent = '● Live'; el.className = 'sync-badge live';
+            }
+        }
+
+        /* ---------- join / lists ---------- */
+
+        function openJoin(prefillCode) {
+            document.getElementById('join-name').value = me.name;
+            document.getElementById('join-code').value = prefillCode || '';
+            document.getElementById('join-error').textContent = '';
+            document.getElementById('join-cancel').style.display = getLists().length ? 'block' : 'none';
+            document.getElementById('join-modal').classList.add('show');
+            closeLists();
+        }
+
+        function closeJoin() { document.getElementById('join-modal').classList.remove('show'); }
+
+        function readJoinName() {
+            const name = document.getElementById('join-name').value.trim();
+            if (!name) { document.getElementById('join-error').textContent = 'Please enter your name first.'; return null; }
+            me.name = name;
+            localStorage.setItem(LS.name, name);
+            return name;
+        }
+
+        async function joinWithCode() {
+            const name = readJoinName(); if (!name) return;
+            const err = document.getElementById('join-error');
+            const code = storeUtils.normalizeCode(document.getElementById('join-code').value);
+            if (!code) { err.textContent = 'The code has 8 letters/numbers, like ABCD-2345.'; return; }
+            err.textContent = 'Checking…';
+            let meta;
+            try { meta = await store.getList(code); }
+            catch (e) { err.textContent = 'Joining a list needs an internet connection the first time. Try again when online.'; return; }
+            if (!meta) { err.textContent = 'No list found with that code. Double-check it.'; return; }
+            await store.join(code, name);
+            const lists = getLists().filter(l => l.code !== code);
+            lists.push({ code, name: meta.name });
+            saveLists(lists);
+            closeJoin();
+            openList(code);
+            showToast(`Joined “${meta.name}”`);
+        }
+
+        async function createNewList() {
+            const name = readJoinName(); if (!name) return;
+            const err = document.getElementById('join-error');
+            const title = document.getElementById('join-list-name').value.trim() || 'Groceries';
+            err.textContent = 'Creating…';
+            let code;
+            try { code = await store.createList(title, name); }
+            catch (e) { console.error(e); err.textContent = 'Starting a list needs an internet connection. Try again when online.'; return; }
+            const lists = getLists();
+            lists.push({ code, name: title });
+            saveLists(lists);
+            closeJoin();
+            openList(code);
+            setTimeout(() => openLists(true), 400);
+        }
+
+        function openLists(justCreated) {
+            const lists = getLists();
+            const others = members.filter(m => m.id !== me.uid).map(m => esc(m.name));
+            document.getElementById('lists-body').innerHTML = `
+                ${justCreated ? '<p class="sheet-note">🎉 Your list is ready. Invite your family so everyone sees the same list.</p>' : ''}
+                <div class="sheet-section">
+                    <div class="sheet-label">This list</div>
+                    <div class="sheet-big">${esc(listName)}</div>
+                    <div class="sheet-small">Code: <strong class="code">${esc(listCode)}</strong></div>
+                    <div class="sheet-small">People: you${others.length ? ', ' + others.join(', ') : ''}</div>
+                    <button class="btn btn-share" onclick="inviteToList()">📨 Invite someone</button>
+                </div>
+                ${lists.length > 1 ? `<div class="sheet-section">
+                    <div class="sheet-label">Your other lists</div>
+                    ${lists.filter(l => l.code !== listCode).map(l =>
+                        `<button class="btn btn-secondary" onclick="switchToList('${esc(l.code)}')">${esc(l.name)}</button>`).join('')}
+                </div>` : ''}
+                <div class="sheet-section">
+                    <div class="sheet-label">You appear as</div>
+                    <div class="sheet-row"><input id="rename-input" value="${esc(me.name)}"><button onclick="renameMe()">Save</button></div>
+                </div>
+                <div class="sheet-section">
+                    <button class="btn btn-secondary" onclick="openJoin()">➕ Join or start another list</button>
+                    <button class="btn btn-danger" onclick="leaveList()">Leave this list on this phone</button>
+                </div>`;
+            document.getElementById('lists-modal').classList.add('show');
+        }
+
+        function closeLists() { document.getElementById('lists-modal').classList.remove('show'); }
+
+        function switchToList(code) { closeLists(); store.unwatch(); openList(code); showToast(`Switched to ${listName}`); }
+
+        function renameMe() {
+            const v = document.getElementById('rename-input').value.trim();
+            if (!v) return;
+            me.name = v;
+            localStorage.setItem(LS.name, v);
+            getLists().forEach(l => store.join(l.code, v));
+            showToast('Name updated');
+        }
+
+        async function leaveList() {
+            if (!confirm(`Remove “${listName}” from this phone? The list stays for everyone else, and you can rejoin with the code ${listCode}.`)) return;
+            await store.leave(listCode);
+            store.unwatch();
+            const lists = getLists().filter(l => l.code !== listCode);
+            saveLists(lists);
+            closeLists();
+            if (lists.length) openList(lists[0].code); else { listCode = null; openJoin(); }
+        }
+
+        function inviteToList() {
+            const url = `${location.origin}${location.pathname}?join=${encodeURIComponent(listCode)}`;
+            const text = `Join our Shopping Man list “${listName}”. Open the link, or enter code ${listCode}.`;
             if (navigator.share) {
-                navigator.share({ title: `${listName} Grocery List`, text, url })
-                    .then(() => { saveToHistory('shared'); showToast('Shared!'); updateUI(); })
-                    .catch(() => fallbackShare(url, text));
+                navigator.share({ title: 'Join my Shopping Man list', text, url }).catch(() => {});
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(`${text}\n${url}`).then(() => showToast('Invite copied! Paste it in a text.'));
             } else {
-                fallbackShare(url, text);
+                alert(`${text}\n\n${url}`);
             }
         }
 
-        function fallbackShare(url, text) {
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(`${text}\n\n${url}`)
-                    .then(() => showToast('Link copied! Paste in a text message.'));
-            } else {
-                alert(`Share this link:\n\n${url}`);
+        // Kept so the old "Share" buttons do something sensible.
+        function shareList() { inviteToList(); }
+
+        /* One-time: upload whatever is on this phone from the old send-a-link version. */
+        function offerImportOfOldList() {
+            if (localStorage.getItem(LS.imported)) return;
+            let oldList = [], oldQty = {}, oldFreq = {};
+            try {
+                oldList = JSON.parse(localStorage.getItem('groceryList_home') || '[]');
+                oldQty = JSON.parse(localStorage.getItem('itemQuantities_home') || '{}');
+                oldFreq = JSON.parse(localStorage.getItem('itemFrequency_home') || '{}');
+            } catch (e) { /* ignore */ }
+            const fresh = oldList.filter(n => items[itemId(n)]?.status !== 'active');
+            if (!fresh.length && !Object.keys(oldFreq).length) { localStorage.setItem(LS.imported, '1'); return; }
+            if (fresh.length && !confirm(`This phone still has ${fresh.length} item(s) from the old Shopping Man:\n\n${fresh.join(', ')}\n\nAdd them to the shared list?`)) {
+                localStorage.setItem(LS.imported, '1');
+                return;
             }
+            const now = Date.now();
+            const ops = [];
+            fresh.forEach(n => {
+                ops.push({ col: 'items', id: itemId(n), data: {
+                    name: n.trim(), norm: norm(n), qty: oldQty[norm(n)] || 1, status: 'active',
+                    addedBy: me.name, addedUid: me.uid, addedAt: now, inCart: false,
+                    removedBy: undefined, removedUid: undefined, removedAt: undefined,
+                    boughtBy: undefined, boughtUid: undefined, boughtAt: undefined }, inc: { addCount: 1 } });
+            });
+            // Carry over Quick Add learning for items not already known.
+            Object.entries(oldFreq).forEach(([n, f]) => {
+                if (!f || items[itemId(n)] || fresh.some(x => norm(x) === n)) return;
+                ops.push({ col: 'items', id: itemId(n), data: { name: n, norm: n, qty: 1, status: 'cleared', addedAt: 0 }, inc: { addCount: f } });
+            });
+            if (fresh.length) ops.push(logEntry('import', { items: fresh }));
+            if (ops.length) commit(ops);
+            localStorage.setItem(LS.imported, '1');
+            if (fresh.length) showToast(`Added ${fresh.length} item(s) from this phone`);
         }
 
-        const legalAudio = new Audio('output.mp3');
-        function playLegalMumboJumbo() {
-            legalAudio.currentTime = 0;
-            legalAudio.play().catch(() => showToast('Unable to play audio'));
-        }
+        /* ---------- microphone ---------- */
 
         async function checkMicPermission() {
             try {
@@ -1468,11 +1586,10 @@
         };
 
         function processVoice(transcript) {
-            // First, protect multi-word items by replacing them with placeholders
             let processed = transcript;
             const replacements = {};
             let placeholderIndex = 0;
-            
+
             Object.entries(multiWordItems).forEach(([item, regex]) => {
                 processed = processed.replace(regex, () => {
                     const placeholder = `__ITEM${placeholderIndex}__`;
@@ -1481,192 +1598,188 @@
                     return placeholder;
                 });
             });
-            
-            // Split on common punctuation and natural pauses
-            const items = processed.split(/[.,;!?]|\s{2,}/)
+
+            const found = processed.split(/[.,;!?]|\s{2,}/)
                 .map(i => {
                     let cleaned = i.trim().replace(/^(and|add|also|plus)\s+/i, '');
-                    // Restore multi-word items
                     Object.entries(replacements).forEach(([placeholder, original]) => {
                         cleaned = cleaned.replace(placeholder, original);
                     });
                     return cleaned;
                 })
                 .filter(i => i.length > 2);
-            
-            items.forEach(item => {
+
+            found.forEach(item => {
                 if (item.length > 0 && !item.includes('__ITEM')) addItem(item);
             });
-            
-            if (items.length > 0) currentTranscript = '';
+
+            if (found.length > 0) currentTranscript = '';
         }
 
+        /* ---------- list changes ---------- */
+
+        let undoTimer = null;
+
         function addItem(name, silent = false) {
-            if (!name) return false;
-            const norm = name.toLowerCase().trim();
-            
-            const deletedIdx = deletedItems.findIndex(i => i.toLowerCase() === norm);
-            if (deletedIdx !== -1) {
-                deletedItems.splice(deletedIdx, 1);
-            }
-            
-            if (groceryList.some(i => i.toLowerCase() === norm)) {
+            if (!name || !listCode) return false;
+            name = name.trim();
+            const n = norm(name);
+            const id = itemId(name);
+            const existing = items[id];
+            const active = activeItems();
+
+            if (existing && existing.status === 'active') {
                 if (!silent) showToast(`"${name}" already on list`);
                 return false;
             }
 
-            const words = norm.split(' ');
-            const similar = groceryList.some(existing => {
-                const eWords = existing.toLowerCase().split(' ');
-                return words.some(w => w.length > 3 && eWords.some(e => e.includes(w) || w.includes(e)));
+            const words = n.split(' ');
+            const similar = active.some(e => {
+                const eWords = e.norm.split(' ');
+                return words.some(w => w.length > 3 && eWords.some(x => x.includes(w) || w.includes(x)));
             });
-
             if (similar) {
-                const diff = words.some(w => w.length > 3 && !groceryList.some(i => i.toLowerCase().includes(w)));
+                const diff = words.some(w => w.length > 3 && !active.some(i => i.norm.includes(w)));
                 if (!diff) {
                     if (!silent) showToast('Similar item already on list');
                     return false;
                 }
             }
 
-            groceryList.push(name);
-            itemFrequency[norm] = (itemFrequency[norm] || 0) + 1;
-            itemOwnership[norm] = deviceId; // Track who added this item
-            saveData();
+            const before = existing ? { ...existing } : null;
+            const [, logId] = commit([
+                { col: 'items', id, data: {
+                    name: existing && existing.status !== 'cleared' ? existing.name : name, norm: n,
+                    qty: 1, status: 'active', inCart: false, cartBy: undefined,
+                    addedBy: me.name, addedUid: me.uid, addedAt: Date.now(),
+                    removedBy: undefined, removedUid: undefined, removedAt: undefined,
+                    boughtBy: undefined, boughtUid: undefined, boughtAt: undefined,
+                }, inc: { addCount: 1 } },
+                logEntry('add', { item: name }),
+            ]);
+
             if (!silent) {
-                showToast(`Added: ${name}`);
                 playSound('yum');
+                showToast(`Added: ${name}`, { label: 'Undo', fn: () => undoAdd(id, before, logId) });
             }
-            updateUI();
             return true;
         }
 
-        function changeQty(idx, delta) {
-            const norm = groceryList[idx].toLowerCase().trim();
-            const current = itemQuantities[norm] || 1;
-            const newQty = current + delta;
-            if (newQty < 1) return;
-            if (newQty === 1) {
-                delete itemQuantities[norm];
+        // Quietly takes back an add made by mistake, so it doesn't clutter the history.
+        function undoAdd(id, before, logId) {
+            const ops = [{ col: 'activity', id: logId, del: true }];
+            if (before) {
+                const restore = {};
+                ['name','qty','status','inCart','cartBy','addedBy','addedUid','addedAt','removedBy','removedUid','removedAt','boughtBy','boughtUid','boughtAt']
+                    .forEach(k => { restore[k] = before[k]; });
+                ops.push({ col: 'items', id, data: restore, inc: { addCount: -1 } });
             } else {
-                itemQuantities[norm] = newQty;
+                ops.push({ col: 'items', id, data: { status: 'cleared', addedAt: 0 }, inc: { addCount: -1 } });
             }
-            saveData();
-            updateUI();
+            commit(ops);
+            showToast('Undone');
         }
 
-        function removeItem(idx) {
+        function changeQty(id, delta) {
+            const it = items[id];
+            if (!it) return;
+            const q = (it.qty || 1) + delta;
+            if (q < 1) return;
+            commit([{ col: 'items', id, data: { qty: q } }]);
+        }
+
+        function removeItem(id) {
+            const it = items[id];
+            if (!it) return;
             playSound('yuck');
-            const item = groceryList[idx];
-            deletedItems.push(item);
-            groceryList.splice(idx, 1);
-            saveData();
-            showToast(`Removed: ${item}`);
-            updateUI();
+            commit([
+                { col: 'items', id, data: { status: 'removed', removedBy: me.name, removedUid: me.uid, removedAt: Date.now(), inCart: false } },
+                logEntry('remove', { item: it.name, addedBy: it.addedBy }),
+            ]);
+            showToast(`Removed: ${it.name}`, { label: 'Undo', fn: () => restoreItem(id, true) });
         }
 
-        function permanentlyDeleteItem(idx) {
-            const item = groceryList[idx];
-            const norm = item.toLowerCase().trim();
-            
-            // Remove from quick add: zero out frequency so it won't appear
-            // until the item is added again in the future
-            itemFrequency[norm] = 0;
-            permanentDeletions[norm] = 0;
-
-            // Remove from list
-            groceryList.splice(idx, 1);
-
-            // Remove from ownership
-            delete itemOwnership[norm];
-            delete itemQuantities[norm];
-            
-            playSound('yuck');
-            saveData();
-            showToast(`Permanently deleted: ${item}`);
-            updateUI();
+        function restoreItem(id, quiet) {
+            const it = items[id];
+            if (!it) return;
+            commit([
+                { col: 'items', id, data: { status: 'active', inCart: false,
+                    removedBy: undefined, removedUid: undefined, removedAt: undefined,
+                    boughtBy: undefined, boughtUid: undefined, boughtAt: undefined } },
+                logEntry('restore', { item: it.name }),
+            ]);
+            if (!quiet) showToast(`Restored: ${it.name}`);
         }
 
-        function restoreItem(item) {
-            deletedItems = deletedItems.filter(i => i.toLowerCase() !== item.toLowerCase());
-            groceryList.push(item);
-            saveData();
-            updateUI();
-            showToast(`Restored: ${item}`);
-        }
+        // Back-compat name used by older buttons
+        function permanentlyDeleteItem(id) { removeItem(id); }
+
+        /* ---------- screens ---------- */
 
         function updateUI() {
-            const activeCount = groceryList.length;
-            document.getElementById('item-count').textContent = activeCount;
+            document.getElementById('item-count').textContent = activeItems().length;
             updateListDisplay();
-            updateQuickAdd();
+            if (document.getElementById('quick-screen').classList.contains('active')) updateQuickAdd();
+            if (document.getElementById('shopping-screen').classList.contains('active')) updateShoppingList();
             updateNavDots();
         }
 
         function updateListDisplay() {
             const list = document.getElementById('current-list');
-            if (groceryList.length === 0 && deletedItems.length === 0) {
+            const act = activeItems();
+            const crossed = crossedItems();
+            if (!act.length && !crossed.length) {
                 list.innerHTML = '<div class="empty-state">Your list is empty.<br>Add items using voice or quick add!</div>';
-            } else {
-                let html = '';
-                groceryList.forEach((item, i) => {
-                    const norm = item.toLowerCase().trim();
-                    const isMyItem = itemOwnership[norm] === deviceId;
-                    const hasBeenShared = lastSharedTimestamp[norm] !== undefined;
-                    const qty = itemQuantities[norm] || 1;
-                    const qtyLabel = qty > 1 ? `${qty} ` : '';
-                    const qtyControls = `<span class="qty-controls"><button class="qty-btn" onclick="changeQty(${i},-1)">&minus;</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="changeQty(${i},1)">+</button></span>`;
-
-                    // Show both Delete and Remove for your unshared items
-                    // Show only Remove for your shared items or others' items
-                    if (isMyItem && !hasBeenShared) {
-                        html += `<div class="list-item">
-                            <span>${qtyLabel}${item}</span>${qtyControls}
-                            <div class="button-group">
-                                <button class="delete-btn" onclick="permanentlyDeleteItem(${i})">Delete</button>
-                                <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
-                            </div>
-                        </div>`;
-                    } else {
-                        html += `<div class="list-item">
-                            <span>${qtyLabel}${item}</span>${qtyControls}
-                            <button class="remove-btn" onclick="removeItem(${i})">Remove</button>
-                        </div>`;
-                    }
-                });
-                deletedItems.forEach(item => {
-                    html += `<div class="list-item deleted">
-                        <span>${item}</span>
-                        <button class="remove-btn" onclick="restoreItem('${item.replace(/'/g, "\\'")}')">Restore</button>
+                return;
+            }
+            let html = '';
+            act.forEach(it => {
+                const qty = it.qty || 1;
+                html += `<div class="list-item">
+                    <div class="item-main">
+                        <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}</span>
+                        <div class="item-meta">added by ${esc(who(it.addedBy, it.addedUid))} · ${ago(it.addedAt)}</div>
+                    </div>
+                    <span class="qty-controls"><button class="qty-btn" onclick="changeQty('${it.id}',-1)">&minus;</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="changeQty('${it.id}',1)">+</button></span>
+                    <button class="remove-btn" onclick="removeItem('${it.id}')">Remove</button>
+                </div>`;
+            });
+            if (crossed.length) {
+                html += `<div class="crossed-header">Recently removed &amp; bought</div>`;
+                crossed.forEach(it => {
+                    const bought = it.status === 'bought';
+                    const how = bought
+                        ? `got by ${esc(who(it.boughtBy, it.boughtUid))} · ${ago(it.boughtAt)}`
+                        : `removed by ${esc(who(it.removedBy, it.removedUid))} · ${ago(it.removedAt)}`;
+                    html += `<div class="list-item deleted ${bought ? 'bought' : ''}">
+                        <div class="item-main">
+                            <span>${bought ? '✓ ' : ''}${esc(display(it))}</span>
+                            <div class="item-meta">${it.addedBy ? `added by ${esc(who(it.addedBy, it.addedUid))} · ` : ''}${how}</div>
+                        </div>
+                        <button class="remove-btn" onclick="restoreItem('${it.id}')">${bought ? 'Need more' : 'Restore'}</button>
                     </div>`;
                 });
-                list.innerHTML = html;
             }
+            list.innerHTML = html;
         }
 
         function updateQuickAdd() {
-            const sixWeeksAgo = Date.now() - (6 * 7 * 24 * 60 * 60 * 1000);
-            
-            // Filter frequency data to exclude items that were only mistakes
-            const sorted = Object.entries(itemFrequency)
-                .filter(([item, freq]) => {
-                    // Exclude if permanently deleted as many times as added (only mistakes)
-                    const permDelCount = permanentDeletions[item] || 0;
-                    return freq > permDelCount; // Keep if used successfully at least once
-                })
-                .sort((a,b) => b[1] - a[1])
-                .map(([item]) => item.charAt(0).toUpperCase() + item.slice(1))
+            const learned = Object.values(items)
+                .filter(i => (i.addCount || 0) > 0)
+                .sort((a, b) => b.addCount - a.addCount)
+                .map(display)
                 .slice(0, 15);
-            
-            const items = [...sorted];
+
+            const quick = [...learned];
             defaultQuickItems.forEach(item => {
-                if (items.length >= 20) return;
-                if (!items.some(i => i.toLowerCase() === item.toLowerCase())) items.push(item);
+                if (quick.length >= 20) return;
+                if (!quick.some(i => i.toLowerCase() === item.toLowerCase())) quick.push(item);
             });
 
-            document.getElementById('quick-items').innerHTML = items.slice(0, 20).map((item, i) =>
-                `<div class="quick-item"><input type="checkbox" id="q${i}" value="${item}"><label for="q${i}">${item}</label></div>`
-            ).join('');
+            document.getElementById('quick-items').innerHTML = quick.slice(0, 20).map((item, i) => {
+                const onList = items[itemId(item)]?.status === 'active';
+                return `<div class="quick-item ${onList ? 'on-list' : ''}"><input type="checkbox" id="q${i}" value="${esc(item)}" ${onList ? 'disabled' : ''}><label for="q${i}">${esc(item)}${onList ? ' ✓' : ''}</label></div>`;
+            }).join('');
         }
 
         function addQuickItems() {
@@ -1677,6 +1790,7 @@
             });
             if (added > 0) playSound('yum');
             showToast(added > 0 ? `Added ${added} item(s)` : 'No items selected or already on list');
+            updateQuickAdd();
         }
 
         function addManualItem() {
@@ -1688,179 +1802,154 @@
         }
 
         function emailList() {
-            if (groceryList.length === 0) return showToast('List is empty!');
-            const text = groceryList.map((i, idx) => `${idx+1}. ${i}`).join('\n');
-            const subject = `Grocery List - ${new Date().toLocaleDateString()}`;
-            const body = `Here's your grocery list:\n\n${text}\n\nGenerated by Grocery List App`;
+            const act = activeItems();
+            if (act.length === 0) return showToast('List is empty!');
+            const text = act.map((i, idx) => `${idx+1}. ${(i.qty || 1) > 1 ? i.qty + ' ' : ''}${display(i)}`).join('\n');
+            const subject = `${listName} - ${new Date().toLocaleDateString()}`;
+            const body = `Here's the grocery list:\n\n${text}\n\nFrom Shopping Man`;
             window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            saveToHistory('emailed');
         }
 
         function resetList() {
-            if (groceryList.length === 0 && deletedItems.length === 0) return showToast('List already empty!');
-            if (confirm('Clear all items (including deleted)?')) {
-                saveToHistory('reset');
-                groceryList = [];
-                deletedItems = [];
-                shoppingChecked = [];
-                lastSharedTimestamp = {};
-                itemQuantities = {};
-                saveData();
-                updateUI();
-                showToast('List reset!');
-            }
+            const all = Object.values(items).filter(i => i.status !== 'cleared');
+            if (!all.length) return showToast('List already empty!');
+            if (!confirm(`Clear the whole list for everyone on “${listName}”? (It will show in the activity log.)`)) return;
+            const ops = all.map(i => ({ col: 'items', id: i.id, data: { status: 'cleared', inCart: false } }));
+            ops.push(logEntry('reset', { items: all.filter(i => i.status === 'active').map(i => i.name) }));
+            commit(ops);
+            showToast('List reset!');
         }
 
-        function clearOldHistory() {
-            const eightWeeksAgo = Date.now() - (8 * 7 * 24 * 60 * 60 * 1000);
-            const originalLength = history.length;
-            history = history.filter(h => new Date(h.date).getTime() > eightWeeksAgo);
-            
-            const removed = originalLength - history.length;
-            if (removed > 0) {
-                saveData();
-                showToast(`Cleared ${removed} old history entries`);
-                showHistory();
-            } else {
-                showToast('No history older than 8 weeks');
-            }
+        async function clearOldHistory() {
+            const n = await store.pruneActivity(listCode, Date.now() - 8 * 7 * 86400000);
+            showToast(n ? `Cleared ${n} old history entries` : 'No history older than 8 weeks');
         }
 
-        function saveToHistory(action) {
-            if (groceryList.length === 0 && deletedItems.length === 0) return;
-            history.unshift({ 
-                date: new Date().toISOString(), 
-                action, 
-                items: [...groceryList], 
-                deleted: [...deletedItems] 
+        function showHistory() {
+            const list = document.getElementById('history-list');
+            if (!activity.length) { list.innerHTML = '<div class="empty-state">Nothing has happened on this list yet</div>'; return; }
+            let html = '', lastDay = '';
+            activity.forEach(a => {
+                const day = new Date(a.at).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+                if (day !== lastDay) { html += `<div class="activity-day">${esc(day)}</div>`; lastDay = day; }
+                const time = new Date(a.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                const by = `<strong>${esc(who(a.by, a.uid))}</strong>`;
+                const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+                a = { ...a, item: cap(a.item), items: (a.items || []).map(cap), left: (a.left || []).map(cap) };
+                const list5 = arr => esc((arr || []).slice(0, 8).join(', ')) + ((arr || []).length > 8 ? ` +${arr.length - 8} more` : '');
+                let icon = '•', text = '';
+                switch (a.type) {
+                    case 'add': icon = '➕'; text = `${by} added ${esc(a.item)}`; break;
+                    case 'remove': icon = '❌'; text = `${by} removed <s>${esc(a.item)}</s>${a.addedBy ? ` <span class="muted">(added by ${esc(a.addedBy)})</span>` : ''}`; break;
+                    case 'restore': icon = '↩️'; text = `${by} put back ${esc(a.item)}`; break;
+                    case 'trip': icon = '🦸‍♂️'; text = `${by} saved the day — got ${a.items?.length || 0}: ${list5(a.items)}${a.left?.length ? `<br><span class="muted">Still needed: ${list5(a.left)}</span>` : ''}`; break;
+                    case 'reset': icon = '🔄'; text = `${by} cleared the list${a.items?.length ? `: ${list5(a.items)}` : ''}`; break;
+                    case 'import': icon = '📥'; text = `${by} brought over ${a.items?.length || 0} item(s) from their phone`; break;
+                    default: text = `${by} ${esc(a.type)}`;
+                }
+                html += `<div class="activity-row"><span class="activity-icon">${icon}</span><span class="activity-text">${text}</span><span class="activity-time">${time}</span></div>`;
             });
-            if (history.length > 20) history = history.slice(0, 20);
-            saveData();
+            list.innerHTML = html;
         }
 
-        // Shopping Man Mode
+        /* ---------- Shopping Man mode ---------- */
+
         function updateShoppingList() {
             const container = document.getElementById('shopping-list');
-            const activeItems = groceryList.filter(item => 
-                !deletedItems.some(d => d.toLowerCase() === item.toLowerCase())
-            );
-            
-            if (activeItems.length === 0) {
+            const act = activeItems();
+
+            if (act.length === 0) {
                 container.innerHTML = '<div style="color: white; text-align: center; padding: 40px; font-size: 18px;">No items to shop for! Add some items first.</div>';
+                updateShoppingProgress();
                 return;
             }
-            
-            // Group items by category
-            const itemsByCategory = {};
-            categoryOrder.forEach(cat => itemsByCategory[cat] = []);
-            
-            activeItems.forEach(item => {
-                const category = getCategory(item);
-                itemsByCategory[category].push(item);
-            });
-            
-            // Build HTML with category sections
+
+            const byCat = {};
+            categoryOrder.forEach(cat => byCat[cat] = []);
+            act.forEach(it => byCat[getCategory(it.name)].push(it));
+
             let html = '';
             categoryOrder.forEach(category => {
-                const items = itemsByCategory[category];
-                if (items.length === 0) return;
-                
-                html += `<div class="category-section">
-                    <h3 class="category-header">${categoryNames[category]}</h3>`;
-                
-                items.forEach(item => {
-                    const isChecked = shoppingChecked.includes(item);
-                    html += `<div class="shopping-item ${isChecked ? 'checked' : ''}">
-                        <input type="checkbox" 
-                               id="shop-${item.replace(/\s/g, '_')}" 
-                               ${isChecked ? 'checked' : ''}
-                               onchange="toggleShoppingItem('${item.replace(/'/g, "\\'")}')">
-                        <span>${item}</span>
-                    </div>`;
+                const list = byCat[category];
+                if (!list.length) return;
+                html += `<div class="category-section"><h3 class="category-header">${categoryNames[category]}</h3>`;
+                list.forEach(it => {
+                    const qty = it.qty || 1;
+                    const helper = it.inCart && it.cartUid !== me.uid ? ` <span class="cart-by">(${esc(it.cartBy || 'someone')} has it)</span>` : '';
+                    html += `<label class="shopping-item ${it.inCart ? 'checked' : ''}">
+                        <input type="checkbox" ${it.inCart ? 'checked' : ''} onchange="toggleShoppingItem('${it.id}')">
+                        <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}${helper}</span>
+                    </label>`;
                 });
-                
                 html += `</div>`;
             });
-            
+
             container.innerHTML = html;
             updateShoppingProgress();
         }
 
-        function toggleShoppingItem(item) {
-            const idx = shoppingChecked.indexOf(item);
-            if (idx === -1) {
-                shoppingChecked.push(item);
-                playSound('swoosh');
-            } else {
-                shoppingChecked.splice(idx, 1);
-            }
-            saveData();
-            updateShoppingList();
+        // Checks are shared, so two shoppers can split up the store.
+        function toggleShoppingItem(id) {
+            const it = items[id];
+            if (!it) return;
+            const now = !it.inCart;
+            if (now) playSound('swoosh');
+            commit([{ col: 'items', id, data: { inCart: now, cartBy: now ? me.name : undefined, cartUid: now ? me.uid : undefined } }]);
         }
 
         function updateShoppingProgress() {
-            const activeItems = groceryList.filter(item => 
-                !deletedItems.some(d => d.toLowerCase() === item.toLowerCase())
-            );
-            const total = activeItems.length;
-            const checked = shoppingChecked.length;
+            const act = activeItems();
+            const total = act.length;
+            const checked = act.filter(i => i.inCart).length;
             const percentage = total > 0 ? (checked / total) * 100 : 0;
-            
+
             const progressFill = document.getElementById('shopping-progress');
             progressFill.style.width = percentage + '%';
             progressFill.textContent = `${checked}/${total} items`;
-            
-            if (checked === total && total > 0) {
-                progressFill.style.background = 'linear-gradient(90deg, #FFD700, #FFA500)';
-            } else {
-                progressFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
-            }
+            progressFill.style.background = (checked === total && total > 0)
+                ? 'linear-gradient(90deg, #FFD700, #FFA500)'
+                : 'linear-gradient(90deg, #4CAF50, #8BC34A)';
         }
 
         function fulfillFoodDuties() {
-            if (shoppingChecked.length === 0) {
-                showToast('Check off items as you add them to your cart!');
-                return;
-            }
-            
-            const completionData = { c: shoppingChecked, l: currentListType };
-            const compressedCompletion = LZString.compressToEncodedURIComponent(JSON.stringify(completionData));
-            const url = `${window.location.origin}${window.location.pathname}?sc=${compressedCompletion}#${currentListType}`;
-            
-            const listName = currentListType === 'home' ? '🏠 Home' : '💼 Office';
-            const text = `🦸‍♂️ Shopping Man Saved the Day!\n\n${listName} - I got: ${shoppingChecked.join(', ')}`;
-            
-            if (navigator.share) {
-                navigator.share({ title: 'Shopping Complete!', text, url })
-                    .then(() => {
-                        shoppingChecked.forEach(item => {
-                            const normItem = item.toLowerCase();
-                            const idx = groceryList.findIndex(i => i.toLowerCase() === normItem);
-                            if (idx !== -1) {
-                                groceryList.splice(idx, 1);
-                            }
-                        });
-                        // BUGFIX: Clear ALL deleted items when shopping completes (including mistakes)
-                        deletedItems = [];
-                        shoppingChecked = [];
-                        saveData();
-                        saveToHistory('shopping_completed');
-                        showToast('🦸‍♂️ Food duties fulfilled! List cleaned up.');
-                        updateUI();
-                        showScreen('voice-screen');
-                    })
-                    .catch(() => fallbackShare(url, text));
-            } else {
-                fallbackShare(url, text);
-            }
+            const act = activeItems();
+            const got = act.filter(i => i.inCart);
+            if (!got.length) return showToast('Check off items as you add them to your cart!');
+            const left = act.filter(i => !i.inCart);
+            const now = Date.now();
+            const ops = [];
+            got.forEach(i => ops.push({ col: 'items', id: i.id, data: {
+                status: 'bought', boughtBy: me.name, boughtUid: me.uid, boughtAt: now, inCart: false } }));
+            // Items bought on earlier trips have done their job; tidy them away.
+            // Removed items stay crossed out (for up to a week) so everyone can see who removed what.
+            Object.values(items).filter(i => i.status === 'bought')
+                .forEach(i => ops.push({ col: 'items', id: i.id, data: { status: 'cleared' } }));
+            ops.push(logEntry('trip', { items: got.map(i => i.name), left: left.map(i => i.name) }));
+            const ids = commit(ops);
+            localStorage.setItem(LS.seenTrip + me.uid + '_' + listCode, ids[ids.length - 1]);
+            celebrate(`🦸‍♂️ Food duties fulfilled! ${got.length} item(s) bought.`);
+            showScreen('voice-screen');
+        }
+
+        // When someone else finishes a trip, everyone on the list gets the victory video.
+        function checkForNewTrip() {
+            const key = LS.seenTrip + me.uid + '_' + listCode;
+            const trip = activity.find(a => a.type === 'trip');
+            const seen = localStorage.getItem(key);
+            localStorage.setItem(key, trip ? trip.id : 'none');
+            if (seen === null) return;            // first look at this list: don't replay old trips
+            if (!trip || trip.id === seen) return;
+            if (trip.uid === me.uid || trip.at < sessionStart - 6 * 3600000) return;
+            celebrate(`🦸‍♂️ ${trip.by || 'Shopping Man'} saved the day! Got: ${(trip.items || []).join(', ')}`);
+        }
+
+        function celebrate(msg) {
+            if (!navigator.onLine) { showToast(msg); return; }  // the video isn't stored for offline use
+            showVictoryVideo(() => showToast(msg));
         }
 
         function showScreen(id) {
-            // Stop microphone if leaving voice screen
-            if (isListening && id !== 'voice-screen') {
-                stopListening();
-            }
-            
+            if (isListening && id !== 'voice-screen') stopListening();
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             if (id === 'edit-screen') updateListDisplay();
@@ -1870,42 +1959,42 @@
             updateNavDots();
         }
 
-        function showHistory() {
-            const list = document.getElementById('history-list');
-            if (history.length === 0) {
-                list.innerHTML = '<div class="empty-state">No past lists yet</div>';
-            } else {
-                list.innerHTML = history.map(h => {
-                    const date = new Date(h.date).toLocaleString();
-                    const emoji = h.action === 'emailed' ? '📧' : (h.action === 'shared' ? '📱' : (h.action === 'shopping_completed' ? '🦸‍♂️' : '🔄'));
-                    const action = h.action === 'emailed' ? 'Emailed' : (h.action === 'shared' ? 'Shared' : (h.action === 'shopping_completed' ? 'Shopping Man!' : 'Reset'));
-                    const allItems = [...(h.items || []), ...(h.deleted || []).map(i => `~~${i}~~`)];
-                    return `<div class="history-item">
-                        <h3>${emoji} ${action}</h3>
-                        <p><strong>Date:</strong> ${date}</p>
-                        <p><strong>Items (${h.items?.length || 0} active, ${h.deleted?.length || 0} deleted):</strong></p>
-                        <ul>${allItems.slice(0,10).map(i => `<li>${i}</li>`).join('')}
-                        ${allItems.length > 10 ? `<li><em>...and ${allItems.length-10} more</em></li>` : ''}</ul>
-                    </div>`;
-                }).join('');
-            }
-        }
-
         function updateNavDots() {
+            const screens = ['voice-screen', 'quick-screen', 'edit-screen', 'shopping-screen'];
             document.querySelectorAll('.dot').forEach((d, i) => {
-                const screens = ['voice-screen', 'quick-screen', 'edit-screen', 'shopping-screen'];
                 d.classList.toggle('active', document.getElementById(screens[i]).classList.contains('active'));
             });
         }
 
-        function showToast(msg) {
+        function showToast(msg, action) {
             const existing = document.querySelector('.toast');
             if (existing) existing.remove();
             const toast = document.createElement('div');
             toast.className = 'toast';
             toast.textContent = msg;
+            if (action) {
+                const b = document.createElement('button');
+                b.className = 'toast-action';
+                b.textContent = action.label;
+                b.onclick = () => { toast.remove(); action.fn(); };
+                toast.appendChild(b);
+            }
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            setTimeout(() => toast.remove(), action ? 6000 : 3000);
+        }
+
+        // Refresh "3m ago" labels now and then.
+        setInterval(() => { if (document.getElementById('edit-screen').classList.contains('active')) updateListDisplay(); }, 60000);
+
+        const legalAudio = new Audio('output.mp3');
+        function playLegalMumboJumbo() {
+            legalAudio.currentTime = 0;
+            legalAudio.play().catch(() => showToast('Unable to play audio'));
+        }
+
+        function startApp() {
+            if (window.store) init();
+            else window.addEventListener('store-loaded', init, { once: true });
         }
 
         // Victory Video functions
@@ -1993,7 +2082,7 @@
         let tutorialStep = 1;
         const tutorialSteps = [
             {
-                description: "👋 <strong>Welcome!</strong> This app lets two people share a grocery list. Person A starts by adding items he or she needs.",
+                description: "👋 <strong>Welcome!</strong> Everyone in the family shares one live list. Person A adds the items he or she needs.",
                 phoneA: [
                     { text: "Milk", delay: 500 },
                     { text: "Eggs", delay: 1000 },
@@ -2005,7 +2094,7 @@
                 phoneBBtn: null
             },
             {
-                description: "📱 <strong>Share the list!</strong> Person A taps 'Share List' to send it to Person B. The list syncs automatically!",
+                description: "📨 <strong>Invite once!</strong> Person A taps 'Invite to List' one time. After that, Person B sees every change instantly — no more sending lists back and forth.",
                 phoneA: [
                     { text: "Milk", show: true },
                     { text: "Eggs", show: true },
@@ -2021,7 +2110,7 @@
                 phoneBBtn: null
             },
             {
-                description: "✏️ <strong>Person B edits!</strong> Person B can add new items (Cheese, Apples) and remove items added by Person A (Bread). Person B shares updated list with Person A. Both lists stay synced!",
+                description: "✏️ <strong>Anyone can edit!</strong> Person B adds Cheese and Apples and removes Bread. Bread stays crossed out with a note saying who removed it, so nobody is surprised.",
                 phoneA: [
                     { text: "Milk", show: true },
                     { text: "Eggs", show: true },
@@ -2279,7 +2368,7 @@
             }
         });
 
-        window.addEventListener('load', init);
+        window.addEventListener('load', startApp);
     </script>
 </body>
 </html>
