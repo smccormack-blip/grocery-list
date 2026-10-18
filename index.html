@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" href="icon-192.png">
     <title>Grocery List - Shopping Man Edition</title>
     <script src="groceries.js"></script>
+    <script src="scene.js"></script>
     <script type="module" src="store.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -911,6 +912,30 @@
         .finale-nerd.show { opacity: 1; transform: none; }
         .victory-modal .skip-button { z-index: 30; }
         .play-button small { font-size: 16px; font-weight: 600; }
+        /* home */
+        .scene { width: 100%; aspect-ratio: 400 / 280; border-radius: 18px; overflow: hidden; margin: 4px 0 16px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.18); background: #fbf1de; }
+        .scene svg { width: 100%; height: 100%; display: block; }
+        .home-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 70px; }
+        .home-buttons .btn { margin: 0; width: 100%; }
+        .home-big { font-size: 18px; padding: 16px 10px; }
+        .btn-shop { background: linear-gradient(135deg, #e53935, #ff7043); color: white; font-weight: 700; }
+        .help-body p { color: #444; font-size: 15px; line-height: 1.5; margin: 10px 2px; }
+        /* list page */
+        .add-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .add-bar input { flex: 1; min-width: 0; font-size: 17px; padding: 12px; border: 2px solid #ddd; border-radius: 12px; }
+        .add-go { border: none; background: #667eea; color: white; font-weight: 700; border-radius: 12px; padding: 0 16px; height: 48px; font-size: 16px; }
+        .mic-button.mic-small { width: 52px; height: 52px; min-width: 52px; font-size: 24px; margin: 0; flex: none; }
+        #edit-screen .status-text { min-height: 0; margin: 0 0 10px; padding: 10px 14px; font-size: 14px; display: block; text-align: left; }
+        #edit-screen .status-text:empty { display: none; }
+        .suggestions { margin: 0 0 10px; }
+        .section-label { font-size: 13px; font-weight: 700; color: #8a8f98; text-transform: uppercase; letter-spacing: 0.04em; margin: 4px 2px 8px; }
+        .quick-items { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+        .quick-chip { border: 2px solid #d7dcf5; background: white; color: #2c3e50; border-radius: 20px; padding: 9px 14px; font-size: 16px; cursor: pointer; }
+        .quick-chip:active { transform: scale(0.95); background: #eef0ff; }
+        .quick-chip.on-list { color: #9aa0a6; border-color: #eee; background: #f6f6f6; }
+        .list-heading { font-size: 20px; color: #2c3e50; margin: 6px 2px 10px; }
+        #edit-screen, #history-screen { padding-bottom: 80px; }
     </style>
 </head>
 <body>
@@ -930,54 +955,33 @@
         </div>
 
         <div id="voice-screen" class="screen active">
-            <h1>🛒 Grocery List</h1>
-            <div class="status-text" id="status-text">
-                Tap the microphone and say your items. Pause between items. Once you are finished adding items, tap the microphone again to turn it off.<br><br>
-                Swipe right to see quick select screens, list and SHOPPING MAN MODE!
-            </div>
-            <button class="mic-button" id="mic-button" onclick="toggleVoice()">🎤</button>
-            <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="showScreen('edit-screen')">
-                    View List (<span id="item-count">0</span>)
-                </button>
-                <button class="btn btn-usuals" onclick="openUsuals()">⭐ Add the Usuals</button>
-                <button class="btn btn-share" onclick="inviteToList()">📨 Invite to List</button>
-                <button class="btn btn-tutorial" onclick="openTutorial()">❓ Tutorial</button>
-            </div>
-
-            <!-- Flying Shopping Man and Friends -->
-            <div class="flying-hero">🦸‍♂️</div>
-            <div class="follower follower-1">🦄</div>
-            <div class="follower follower-2">🐱</div>
-            <div class="follower follower-3">🦄</div>
-        </div>
-
-        <div id="quick-screen" class="screen">
-            <h1>Quick Add Items</h1>
-            <button class="btn btn-usuals" style="width:100%;margin-bottom:16px" onclick="openUsuals()">⭐ Add the Usuals</button>
-            <div class="quick-items" id="quick-items"></div>
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="addQuickItems()">Add Selected</button>
-                <button class="btn btn-secondary" onclick="updateQuickAdd(); showToast('Quick add list refreshed!')">Refresh List</button>
-                <button class="btn btn-secondary" onclick="showScreen('voice-screen')">Back</button>
+            <div class="scene" id="scene"></div>
+            <div class="home-buttons">
+                <button class="btn btn-primary home-big" onclick="showScreen('edit-screen')">📝 Our List (<span id="item-count">0</span>)</button>
+                <button class="btn btn-shop home-big" onclick="showScreen('shopping-screen')">🦸‍♂️ Go Shopping</button>
+                <button class="btn btn-secondary" onclick="showScreen('history-screen')">📜 Activity</button>
+                <button class="btn btn-share" onclick="inviteToList()">📨 Invite</button>
+                <button class="btn btn-tutorial" onclick="openHelp()">❓ How it works</button>
+                <button class="btn btn-legal" onclick="playLegalMumboJumbo()">⚖️ Legal Mumbo Jumbo</button>
             </div>
         </div>
 
         <div id="edit-screen" class="screen">
-            <h1>Current List</h1>
-            <div class="manual-add">
-                <input type="text" id="manual-input" placeholder="Type item name..." autocomplete="off">
-                <button onclick="addManualItem()">Add</button>
+            <div class="add-bar">
+                <button class="mic-button mic-small" id="mic-button" onclick="toggleVoice()" aria-label="Add by voice">🎤</button>
+                <input type="text" id="manual-input" placeholder="Type an item…" autocomplete="off">
+                <button class="add-go" onclick="addManualItem()">Add</button>
             </div>
+            <div class="status-text" id="status-text"></div>
             <div class="suggestions" id="suggestions"></div>
-            <button class="btn btn-usuals" style="width:100%;margin-bottom:16px" onclick="openUsuals()">⭐ Add the Usuals</button>
+            <button class="btn btn-usuals" style="width:100%;margin-bottom:12px" onclick="openUsuals()">⭐ Add the Usuals</button>
+            <div class="section-label">Quick add — tap to add</div>
+            <div class="quick-items" id="quick-items"></div>
+            <h2 class="list-heading">Our List (<span id="item-count2">0</span>)</h2>
             <div id="current-list"></div>
             <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="showScreen('history-screen')">📜 Activity</button>
-                <button class="btn btn-share" onclick="inviteToList()">📨 Invite</button>
                 <button class="btn btn-success" onclick="emailList()">📧 Email</button>
                 <button class="btn btn-danger" onclick="resetList()">Reset</button>
-                <button class="btn btn-legal" style="width:100%" onclick="playLegalMumboJumbo()">Legal Mumbo Jumbo</button>
             </div>
         </div>
 
@@ -986,7 +990,7 @@
             <div id="history-list"></div>
             <div class="action-buttons">
                 <button class="btn btn-danger" onclick="clearOldHistory()">Clear Old History (8+ weeks)</button>
-                <button class="btn btn-secondary" onclick="showScreen('edit-screen')">Back</button>
+                <button class="btn btn-secondary" onclick="showScreen('voice-screen')">Back</button>
             </div>
         </div>
 
@@ -1009,9 +1013,9 @@
 
     <div class="nav-dots">
         <div class="dot active" onclick="showScreen('voice-screen')"></div>
-        <div class="dot" onclick="showScreen('quick-screen')"></div>
         <div class="dot" onclick="showScreen('edit-screen')"></div>
         <div class="dot" onclick="showScreen('shopping-screen')">🦸</div>
+    </div>
     </div>
 
     <!-- Join / start a list -->
@@ -1036,6 +1040,22 @@
             </div>
             <div id="join-error" class="sheet-error"></div>
             <button id="join-cancel" class="sheet-close" onclick="closeJoin()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="sheet-modal" id="help-modal">
+        <div class="sheet">
+            <h2>❓ How Shopping Man works</h2>
+            <div class="help-body">
+                <p><strong>One live list for the family.</strong> Everyone on the list sees every change within a second or two, even in a store with no signal (it catches up later).</p>
+                <p><strong>📝 Our List:</strong> tap 🎤 and say your items, pausing between them, then tap 🎤 again to stop. Or type them in. Tap any quick-add item to add it in one tap, or ⭐ <em>Add the Usuals</em>.</p>
+                <p><strong>🦸‍♂️ Shopping Man mode:</strong> items are sorted by aisle. Check them off as they go in the cart; tap ⋮ to move an item to a different aisle. When you're done, tap <em>Fulfilled Food Duties</em> and everyone gets the victory celebration.</p>
+                <p><strong>Removed items</strong> stay crossed out (with who removed them) until the next shopping trip. <strong>📜 Activity</strong> shows the whole history.</p>
+                <p><strong>Getting around:</strong> swipe left or right between pages, or use the dots at the bottom.</p>
+            </div>
+            <button class="btn btn-tutorial" onclick="document.getElementById('help-modal').classList.remove('show'); openTutorial()">▶️ Watch the tutorial</button>
+            <button class="sheet-close" onclick="document.getElementById('help-modal').classList.remove('show')">Got it</button>
         </div>
     </div>
 
@@ -1387,6 +1407,7 @@
         /* ---------- start-up ---------- */
 
         async function init() {
+            try { SMScene.mount(document.getElementById('scene')); SMScene.start(); } catch (e) { console.log('scene', e); }
             initSounds();
             checkMicPermission();
             setupVoiceRecognition();
@@ -1646,13 +1667,8 @@
                 if (navigator.permissions) {
                     const result = await navigator.permissions.query({ name: 'microphone' });
                     micPermitted = result.state === 'granted';
-                    document.getElementById('permission-banner').classList.toggle('show', !micPermitted);
-                } else {
-                    document.getElementById('permission-banner').classList.add('show');
                 }
-            } catch (e) {
-                document.getElementById('permission-banner').classList.add('show');
-            }
+            } catch (e) { /* ask when the mic is tapped */ }
         }
 
         async function requestMicrophonePermission() {
@@ -1712,7 +1728,7 @@
             isListening = true;
             currentTranscript = '';
             document.getElementById('mic-button').classList.add('listening');
-            document.getElementById('status-text').textContent = 'Listening...';
+            document.getElementById('status-text').textContent = '🎤 Listening… say items, pausing between them. Tap 🎤 again to stop.';
             try { recognition.start(); } catch(e) { stopListening(); }
         }
 
@@ -1720,7 +1736,7 @@
             isListening = false;
             if (recognition) recognition.stop();
             document.getElementById('mic-button').classList.remove('listening');
-            document.getElementById('status-text').textContent = 'Tap the microphone and say your items. Pause between items. Once you are finished adding items, tap the microphone again to turn it off.\n\nSwipe right to see quick select screens, list and SHOPPING MAN MODE!';
+            document.getElementById('status-text').textContent = '';
         }
 
         // Multi-word items that should stay together
@@ -1888,9 +1904,11 @@
         /* ---------- screens ---------- */
 
         function updateUI() {
-            document.getElementById('item-count').textContent = activeItems().length;
+            const count = activeItems().length;
+            document.getElementById('item-count').textContent = count;
+            document.getElementById('item-count2').textContent = count;
             updateListDisplay();
-            if (document.getElementById('quick-screen').classList.contains('active')) updateQuickAdd();
+            if (document.getElementById('edit-screen').classList.contains('active')) updateQuickAdd();
             if (document.getElementById('shopping-screen').classList.contains('active')) updateShoppingList();
             updateNavDots();
         }
@@ -2011,20 +2029,14 @@
                 if (!quick.some(i => i.toLowerCase() === item.toLowerCase())) quick.push(item);
             });
 
-            document.getElementById('quick-items').innerHTML = quick.slice(0, 20).map((item, i) => {
+            document.getElementById('quick-items').innerHTML = quick.slice(0, 20).map(item => {
                 const onList = items[itemId(item)]?.status === 'active';
-                return `<div class="quick-item ${onList ? 'on-list' : ''}"><input type="checkbox" id="q${i}" value="${esc(item)}" ${onList ? 'disabled' : ''}><label for="q${i}">${esc(item)}${onList ? ' ✓' : ''}</label></div>`;
+                return `<button class="quick-chip ${onList ? 'on-list' : ''}" data-name="${esc(item)}" ${onList ? 'disabled' : ''}>${onList ? '✓ ' : '+ '}${esc(item)}</button>`;
             }).join('');
         }
 
-        function addQuickItems() {
-            let added = 0;
-            document.querySelectorAll('.quick-item input:checked').forEach(cb => {
-                if (addItem(cb.value, true)) added++;
-                cb.checked = false;
-            });
-            if (added > 0) playSound('yum');
-            showToast(added > 0 ? `Added ${added} item(s)` : 'No items selected or already on list');
+        function quickAdd(name) {
+            addItem(name, false, { noFix: true });
             updateQuickAdd();
         }
 
@@ -2209,15 +2221,18 @@
             if (isListening && id !== 'voice-screen') stopListening();
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            if (id === 'edit-screen') updateListDisplay();
-            else if (id === 'quick-screen') updateQuickAdd();
+            if (id === 'edit-screen') { updateListDisplay(); updateQuickAdd(); }
             else if (id === 'history-screen') showHistory();
             else if (id === 'shopping-screen') updateShoppingList();
             updateNavDots();
+            if (window.SMScene) { if (id === 'voice-screen') SMScene.start(); else SMScene.stop(); }
+            window.scrollTo(0, 0);
         }
 
+        function openHelp() { document.getElementById('help-modal').classList.add('show'); }
+
         function updateNavDots() {
-            const screens = ['voice-screen', 'quick-screen', 'edit-screen', 'shopping-screen'];
+            const screens = ['voice-screen', 'edit-screen', 'shopping-screen'];
             document.querySelectorAll('.dot').forEach((d, i) => {
                 d.classList.toggle('active', document.getElementById(screens[i]).classList.contains('active'));
             });
@@ -2401,7 +2416,7 @@
                 return armBack();
             }
             const active = document.querySelector('.screen.active').id;
-            const prev = { 'quick-screen': 'voice-screen', 'edit-screen': 'quick-screen', 'shopping-screen': 'edit-screen', 'history-screen': 'edit-screen' }[active];
+            const prev = { 'edit-screen': 'voice-screen', 'shopping-screen': 'edit-screen', 'history-screen': 'voice-screen' }[active];
             if (prev) { showScreen(prev); return armBack(); }
             document.getElementById('exit-modal').classList.add('show');
             armBack();
@@ -2434,13 +2449,11 @@
             if (Math.abs(diff) < 90 || Math.abs(diff) < 2.5 * Math.abs(dy) || Date.now() - touchT > 800) return;
             const active = document.querySelector('.screen.active').id;
             if (diff > 0) {
-                if (active === 'voice-screen') showScreen('quick-screen');
-                else if (active === 'quick-screen') showScreen('edit-screen');
+                if (active === 'voice-screen') showScreen('edit-screen');
                 else if (active === 'edit-screen') showScreen('shopping-screen');
             } else {
                 if (active === 'shopping-screen') showScreen('edit-screen');
-                else if (active === 'edit-screen') showScreen('quick-screen');
-                else if (active === 'quick-screen') showScreen('voice-screen');
+                else if (active === 'edit-screen' || active === 'history-screen') showScreen('voice-screen');
             }
         });
 
@@ -2448,6 +2461,8 @@
         document.addEventListener('click', e => {
             const b = e.target.closest('.suggestion');
             if (b) pickSuggestion(b.dataset.name);
+            const q = e.target.closest('.quick-chip');
+            if (q && !q.disabled) quickAdd(q.dataset.name);
         });
 
         document.addEventListener('keypress', e => {
