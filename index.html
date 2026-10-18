@@ -8,6 +8,7 @@
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
     <title>Grocery List - Shopping Man Edition</title>
     <script src="groceries.js"></script>
     <script type="module" src="store.js"></script>
@@ -880,6 +881,36 @@
         .victory-modal .sound-button { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; border: 3px solid #fff; padding: 14px 28px;
             border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 20; }
+        /* compact shopping list */
+        .progress-bar { height: 28px; margin: 8px 0 14px; }
+        .progress-fill { min-width: 90px; white-space: nowrap; font-size: 14px; }
+        .shopping-screen h1 { margin-bottom: 8px; }
+        .category-section { margin-bottom: 10px; }
+        .category-header { font-size: 15px; padding: 3px 10px; margin: 0 0 4px; border-left-width: 3px; text-shadow: 1px 1px 2px #000; }
+        .shopping-item { padding: 0; margin: 5px 0; border-radius: 10px; }
+        .shop-main { display: flex; align-items: center; flex: 1; padding: 9px 4px 9px 12px; cursor: pointer; min-width: 0; }
+        .shopping-item input[type="checkbox"] { width: 26px; height: 26px; margin-right: 12px; flex: none; }
+        .shopping-item span { font-size: 18px; }
+        .aisle-btn { flex: none; background: none; border: none; font-size: 22px; color: #9aa0a6; padding: 6px 14px; cursor: pointer; }
+        /* finale */
+        .finale { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column;
+            overflow: hidden; background: radial-gradient(circle at 50% 40%, #3a1c71, #0b0620 70%); }
+        .finale.show { display: flex; }
+        .finale-confetti span { position: absolute; top: -60px; animation: confettiFall linear infinite; }
+        @keyframes confettiFall { to { transform: translateY(115vh) rotate(540deg); } }
+        .finale-title { text-align: center; font-family: 'Arial Black', Impact, sans-serif; font-size: clamp(30px, 9vw, 58px); line-height: 1.15;
+            color: #ffd700; text-shadow: 3px 3px 0 #e53935, 6px 6px 0 #1e3a8a, 0 0 30px rgba(255,215,0,0.7); padding: 0 12px; z-index: 2;
+            transition: opacity 0.6s, transform 0.6s; }
+        .finale-title span { display: inline-block; animation: letterPop 0.6s cubic-bezier(.3,1.8,.5,1) both, letterBob 1.2s ease-in-out 0.8s infinite; }
+        @keyframes letterPop { from { transform: scale(0) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+        @keyframes letterBob { 50% { transform: translateY(-8px); } }
+        .finale.awkward .finale-title { opacity: 0.25; transform: scale(0.9); }
+        .finale.awkward .finale-confetti { opacity: 0.2; transition: opacity 1s; }
+        .finale-nerd { margin-top: 26px; font-family: 'Courier New', monospace; font-size: 22px; color: #e0f7fa; z-index: 2;
+            opacity: 0; transform: translateY(10px); transition: opacity 0.4s, transform 0.4s; padding: 0 16px; text-align: center; }
+        .finale-nerd.show { opacity: 1; transform: none; }
+        .victory-modal .skip-button { z-index: 30; }
+        .play-button small { font-size: 16px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -939,6 +970,7 @@
                 <button onclick="addManualItem()">Add</button>
             </div>
             <div class="suggestions" id="suggestions"></div>
+            <button class="btn btn-usuals" style="width:100%;margin-bottom:16px" onclick="openUsuals()">⭐ Add the Usuals</button>
             <div id="current-list"></div>
             <div class="action-buttons">
                 <button class="btn btn-secondary" onclick="showScreen('history-screen')">📜 Activity</button>
@@ -1007,6 +1039,16 @@
         </div>
     </div>
 
+    <!-- Leave? -->
+    <div class="sheet-modal" id="exit-modal">
+        <div class="sheet">
+            <h2>Leave Shopping Man?</h2>
+            <p class="sheet-note">Your list is saved either way.</p>
+            <button class="btn btn-primary" onclick="stayInApp()">Stay</button>
+            <button class="btn btn-secondary" onclick="leaveApp()">Leave</button>
+        </div>
+    </div>
+
     <!-- The usuals -->
     <div class="sheet-modal" id="usuals-modal">
         <div class="sheet">
@@ -1041,7 +1083,7 @@
         <div class="victory-container">
             <div class="play-overlay" id="play-overlay">
                 <button class="play-button" onclick="playVictoryVideo()">
-                    🎥 Tap to See Shopping Man's Victory!
+                    🦸‍♂️ Shopping Man saved the day!<br><small>Tap to watch</small>
                 </button>
             </div>
             <video id="victory-video" playsinline preload="auto">
@@ -1049,7 +1091,11 @@
             </video>
         </div>
         <button class="skip-button" onclick="closeVictoryVideo()" style="display: none;" id="skip-button">Skip</button>
-        <button class="sound-button" onclick="unmuteVictory()" style="display: none;" id="sound-button">🔊 Tap for sound</button>
+        <div class="finale" id="finale">
+            <div class="finale-confetti" id="finale-confetti"></div>
+            <div class="finale-title" id="finale-title"></div>
+            <div class="finale-nerd" id="finale-nerd"></div>
+        </div>
     </div>
 
     <!-- Tutorial Modal -->
@@ -1241,13 +1287,21 @@
         }
 
         // Store section for an item: the family's choice if someone set one, else the dictionary, else a guess.
+        // The last word decides ("peanut butter pretzels" are pretzels, not butter).
         function getCategory(itemOrName) {
             const name = typeof itemOrName === 'string' ? itemOrName : itemOrName.name;
             const it = typeof itemOrName === 'string' ? items[itemId(itemOrName)] : itemOrName;
             if (it && it.category && categoryNames[it.category]) return it.category;
             const n = norm(name);
-            const d = dictLookup(n);
-            if (d) return d.cat;
+            const words = n.split(' ');
+            if (words.length > 1 && words[0] === 'frozen') return 'frozen';
+            if (words.length > 1 && words[0] === 'canned') return 'canned';
+            for (let k = 0; k < words.length; k++) {        // whole name, then shorter endings
+                const d = dictLookup(words.slice(k).join(' '));
+                if (d) return d.cat;
+            }
+            const last = words[words.length - 1];
+            for (const [re, cat] of KEYWORDS) if (re.test(last)) return cat;
             for (const [re, cat] of KEYWORDS) if (re.test(n)) return cat;
             return 'other';
         }
@@ -1850,23 +1904,19 @@
                 return;
             }
             let html = '';
-            const byCat = {};
-            act.forEach(it => { (byCat[getCategory(it)] = byCat[getCategory(it)] || []).push(it); });
-            categoryOrder.forEach(cat => {
-                if (!byCat[cat]) return;
-                html += `<div class="list-section">${categoryNames[cat]}</div>`;
-                byCat[cat].forEach(it => {
+            {
+                act.forEach(it => {
                     const qty = it.qty || 1;
                     html += `<div class="list-item">
                         <div class="item-main">
                             <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}</span>
-                            <div class="item-meta">added by ${esc(who(it.addedBy, it.addedUid))} · ${ago(it.addedAt)} · <button class="cat-link" onclick="pickCategory('${it.id}')">move aisle</button></div>
+                            <div class="item-meta">added by ${esc(who(it.addedBy, it.addedUid))} · ${ago(it.addedAt)}</div>
                         </div>
                         <span class="qty-controls"><button class="qty-btn" onclick="changeQty('${it.id}',-1)">&minus;</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="changeQty('${it.id}',1)">+</button></span>
                         <button class="remove-btn" onclick="removeItem('${it.id}')">Remove</button>
                     </div>`;
                 });
-            });
+            }
             if (crossed.length) {
                 html += `<div class="crossed-header">Removed</div>`;
                 crossed.forEach(it => {
@@ -2077,10 +2127,13 @@
                 list.forEach(it => {
                     const qty = it.qty || 1;
                     const helper = it.inCart && it.cartUid !== me.uid ? ` <span class="cart-by">(${esc(it.cartBy || 'someone')} has it)</span>` : '';
-                    html += `<label class="shopping-item ${it.inCart ? 'checked' : ''}">
-                        <input type="checkbox" ${it.inCart ? 'checked' : ''} onchange="toggleShoppingItem('${it.id}')">
-                        <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}${helper}</span>
-                    </label>`;
+                    html += `<div class="shopping-item ${it.inCart ? 'checked' : ''}">
+                        <label class="shop-main">
+                            <input type="checkbox" ${it.inCart ? 'checked' : ''} onchange="toggleShoppingItem('${it.id}')">
+                            <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}${helper}</span>
+                        </label>
+                        <button class="aisle-btn" onclick="pickCategory('${it.id}')" aria-label="Move to another aisle">⋮</button>
+                    </div>`;
                 });
                 html += `</div>`;
             });
@@ -2143,13 +2196,13 @@
             localStorage.setItem(key, trip ? trip.id : 'none');
             if (seen === null) return;            // first look at this list: don't replay old trips
             if (!trip || trip.id === seen) return;
-            if (trip.uid === me.uid || trip.at < sessionStart - 6 * 3600000) return;
-            celebrate(`🦸‍♂️ ${trip.by || 'Shopping Man'} saved the day! Got: ${(trip.items || []).join(', ')}`, false);
+            if (trip.uid === me.uid || trip.at < Date.now() - 2 * 86400000) return;
+            celebrate(`🦸‍♂️ ${trip.by || 'Shopping Man'} saved the day! Got: ${(trip.items || []).join(', ')}`, false, trip.at);
         }
 
-        function celebrate(msg, mine) {
+        function celebrate(msg, mine, when) {
             if (!navigator.onLine) { showToast(msg); return; }  // the video isn't stored for offline use
-            playVictory(!!mine, () => showToast(msg));
+            playVictory(!!mine, () => showToast(msg), when || Date.now());
         }
 
         function showScreen(id) {
@@ -2202,51 +2255,113 @@
         }
 
         // Victory Video functions
-        // withSound: true when started by a tap on this phone (phones only allow sound after a tap).
-        // Otherwise it starts muted with a "Tap for sound" button.
-        function playVictory(withSound, callback) {
+        // Sequence: victory video, then a fanciful "Shopping Man Saves the Day" title,
+        // an awkward pause, and a nerdy voice reading out the date of the rescue.
+        // withSound: started by a tap on this phone, so it can play right away with sound.
+        // Otherwise a big "Tap to watch" button appears first (phones only allow sound after a tap).
+        let victoryWhen = 0, finaleTimers = [];
+
+        function unlockSpeech() {
+            try { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
+        }
+
+        function playVictory(withSound, callback, when) {
             const modal = document.getElementById('victory-modal');
             const video = document.getElementById('victory-video');
-            const overlay = document.getElementById('play-overlay');
-            const skip = document.getElementById('skip-button');
-            const soundBtn = document.getElementById('sound-button');
+            victoryWhen = when || Date.now();
             window.victoryCallback = callback || null;
+            document.getElementById('finale').classList.remove('show');
+            document.querySelector('.victory-container').style.display = '';
             modal.classList.add('show');
-            overlay.classList.add('hidden');
-            skip.style.display = 'block';
-            video.onended = closeVictoryVideo;
+            document.getElementById('skip-button').style.display = 'block';
+            video.onended = showFinale;
+            video.onerror = showFinale;
             try { video.currentTime = 0; } catch (e) {}
-            const start = muted => {
-                video.muted = muted;
-                soundBtn.style.display = muted ? 'block' : 'none';
-                return video.play();
-            };
-            start(!withSound).catch(() => start(true)).catch(() => {
-                // Couldn't start on its own: show the big play button instead.
-                soundBtn.style.display = 'none';
-                overlay.classList.remove('hidden');
-            });
+            if (withSound) { unlockSpeech(); startVictoryVideo(); }
+            else document.getElementById('play-overlay').classList.remove('hidden');
         }
 
-        // Old name, still used by the big play button.
-        function showVictoryVideo(callback) { playVictory(false, callback); }
-
-        function playVictoryVideo() {
+        function startVictoryVideo() {
             const video = document.getElementById('victory-video');
             document.getElementById('play-overlay').classList.add('hidden');
-            document.getElementById('sound-button').style.display = 'none';
             video.muted = false;
-            video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+            video.play().catch(() => { video.muted = true; video.play().catch(showFinale); });
         }
 
-        function unmuteVictory() {
+        // The big "Tap to watch" button
+        function playVictoryVideo() { unlockSpeech(); startVictoryVideo(); }
+
+        // Old name kept for safety
+        function showVictoryVideo(callback) { playVictory(false, callback); }
+
+        function nerdyDate(ms) {
+            const d = new Date(ms);
+            const day = d.getDate();
+            const suf = (day % 100 >= 11 && day % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th');
+            return `On ${d.toLocaleString('en-US', { month: 'long' })} ${day}${suf}, ${d.getFullYear()}.`;
+        }
+
+        function showFinale() {
             const video = document.getElementById('victory-video');
-            video.muted = false;
-            document.getElementById('sound-button').style.display = 'none';
-            if (video.paused) video.play().catch(() => {});
+            video.pause();
+            document.querySelector('.victory-container').style.display = 'none';
+            const fin = document.getElementById('finale');
+            const title = document.getElementById('finale-title');
+            const nerd = document.getElementById('finale-nerd');
+            let n = 0;
+            title.innerHTML = ['SHOPPING MAN', 'SAVES THE DAY!'].map(line => line.split('').map(ch =>
+                `<span style="animation-delay:${(n++ * 0.045).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')).join('<br>');
+            nerd.textContent = '';
+            nerd.classList.remove('show');
+            fin.classList.add('show');
+            fin.classList.remove('awkward');
+            launchConfetti();
+            const date = nerdyDate(victoryWhen);
+            finaleTimers.push(setTimeout(() => fin.classList.add('awkward'), 3200));          // ...awkward silence...
+            finaleTimers.push(setTimeout(() => {
+                nerd.textContent = '🤓 ' + date;
+                nerd.classList.add('show');
+                speakNerdy(date, () => finaleTimers.push(setTimeout(closeVictoryVideo, 1800)));
+            }, 5400));
+        }
+
+        function speakNerdy(text, done) {
+            let finished = false;
+            const end = () => { if (!finished) { finished = true; done(); } };
+            finaleTimers.push(setTimeout(end, 7000));   // in case the phone has no voice
+            try {
+                if (!('speechSynthesis' in window)) return;
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.pitch = 2;        // squeaky
+                u.rate = 0.78;      // ...slowly...and...precisely
+                const voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+                const pick = voices.find(v => /male|david|daniel|fred|alex/i.test(v.name)) || voices[0];
+                if (pick) u.voice = pick;
+                u.onend = end; u.onerror = end;
+                speechSynthesis.speak(u);
+            } catch (e) { end(); }
+        }
+
+        function launchConfetti() {
+            const box = document.getElementById('finale-confetti');
+            box.innerHTML = '';
+            const bits = ['🦄', '🐱', '⭐', '🛒', '✨', '🥕', '🍌', '🧀', '🦸‍♂️', '🎉'];
+            for (let i = 0; i < 34; i++) {
+                const el = document.createElement('span');
+                el.textContent = bits[i % bits.length];
+                el.style.left = Math.random() * 100 + '%';
+                el.style.animationDelay = (Math.random() * 1.5).toFixed(2) + 's';
+                el.style.animationDuration = (2.5 + Math.random() * 2.5).toFixed(2) + 's';
+                el.style.fontSize = (22 + Math.random() * 26) + 'px';
+                box.appendChild(el);
+            }
         }
 
         function closeVictoryVideo() {
+            finaleTimers.forEach(clearTimeout); finaleTimers = [];
+            try { speechSynthesis.cancel(); } catch (e) {}
             const modal = document.getElementById('victory-modal');
             const video = document.getElementById('victory-video');
             modal.classList.remove('show');
@@ -2254,12 +2369,52 @@
             try { video.currentTime = 0; } catch (e) {}
             document.getElementById('play-overlay').classList.add('hidden');
             document.getElementById('skip-button').style.display = 'none';
-            document.getElementById('sound-button').style.display = 'none';
+            document.getElementById('finale').classList.remove('show');
+            document.querySelector('.victory-container').style.display = '';
             if (window.victoryCallback) {
                 const cb = window.victoryCallback;
                 window.victoryCallback = null;
                 cb();
             }
+        }
+
+        /* ---------- back button / back swipe ---------- */
+        // Back closes pop-ups, then steps back through the screens, then asks before leaving.
+        let backArmed = false;
+        function armBack() {
+            if (backArmed) return;
+            backArmed = true;
+            history.pushState({ sm: 'guard' }, '');
+        }
+        // Chrome only honors this after the person has touched the page.
+        ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, armBack, { capture: true }));
+
+        window.addEventListener('popstate', () => {
+            if (!backArmed) return;
+            backArmed = false;
+            const open = document.querySelector('.sheet-modal.show, .tutorial-modal.show, .victory-modal.show');
+            if (open) {
+                if (open.id === 'victory-modal') closeVictoryVideo();
+                else if (open.id === 'tutorial-modal') closeTutorial();
+                else if (open.id === 'exit-modal') return leaveApp();   // second back = leave
+                else if (open.id !== 'join-modal') open.classList.remove('show');
+                return armBack();
+            }
+            const active = document.querySelector('.screen.active').id;
+            const prev = { 'quick-screen': 'voice-screen', 'edit-screen': 'quick-screen', 'shopping-screen': 'edit-screen', 'history-screen': 'edit-screen' }[active];
+            if (prev) { showScreen(prev); return armBack(); }
+            document.getElementById('exit-modal').classList.add('show');
+            armBack();
+        });
+
+        function stayInApp() { document.getElementById('exit-modal').classList.remove('show'); }
+
+        function leaveApp() {
+            document.getElementById('exit-modal').classList.remove('show');
+            backArmed = false;
+            history.go(-2);
+            setTimeout(() => { try { window.close(); } catch (e) {} }, 300);
+            setTimeout(() => { if (!document.hidden) showToast('Swipe back once more to leave'); }, 700);
         }
 
         // Swipe between screens — only for a clearly sideways swipe, so scrolling down never changes screens.
@@ -2545,7 +2700,7 @@
         // Tutorial video functions
         // Plays the real victory video full screen (the tap on the button allows sound).
         function playTutorialVideo() {
-            playVictory(true);
+            playVictory(true, null, Date.now());
         }
 
         function stopTutorialVideo() {
