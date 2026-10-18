@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Shopping Man security rules.
+// Paste this into Firebase console → Firestore Database → Rules → Publish.
+//
+// How access works:
+//  * Each list's 8-character code is its address. Nobody can browse or list
+//    other people's lists, so you have to know the code to find one.
+//  * Knowing the code lets a phone add itself as a member.
+//  * Only members can read or change a list's items and activity.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isMember(code) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/lists/$(code)/members/$(request.auth.uid));
+    }
+
+    match /lists/{code} {
+      // Look up a list by its exact code (needed to join). No browsing.
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && code.matches('^[A-Z0-9]{4}-[A-Z0-9]{4}$')
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isMember(code);
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(code);
+        // You may only add or rename yourself, and only on a list that exists
+        // (existsAfter covers the batch that creates the list and its first member together).
+        allow create, update: if signedIn() && request.auth.uid == uid
+          && existsAfter(/databases/$(database)/documents/lists/$(code));
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+
+      match /items/{itemId} {
+        allow read, write: if isMember(code);
+      }
+
+      match /activity/{entryId} {
+        allow read, create, delete: if isMember(code);
+        allow update: if false;
+      }
+    }
+  }
+}
