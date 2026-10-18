@@ -1,21 +1,12 @@
 // Shopping Man — Firebase settings
-//
-// Paste the config block from your Firebase project here
-// (Firebase console → Project settings → General → Your apps → Web app → "Config").
-// See SETUP.md for step-by-step instructions.
-//
-// While this is left as null, the app runs in DEMO MODE: everything works,
-// but the list is only stored on this one phone and is NOT shared.
+// These values identify the Firebase project; they are not secret.
+// Access to the list is controlled by firestore.rules. See SETUP.md.
 
-export const firebaseConfig = null;
-
-// Example of what it will look like once filled in:
-//
-// export const firebaseConfig = {
-//   apiKey: "AIza...",
-//   authDomain: "shopping-man-xxxxx.firebaseapp.com",
-//   projectId: "shopping-man-xxxxx",
-//   storageBucket: "shopping-man-xxxxx.appspot.com",
-//   messagingSenderId: "1234567890",
-//   appId: "1:1234567890:web:abcdef123456"
-// };
+export const firebaseConfig = {
+  apiKey: "AIzaSyAfxv5g54maI9ZruZMZ0PhSIb4kbUWNjaM",
+  authDomain: "shopping-man-koji.firebaseapp.com",
+  projectId: "shopping-man-koji",
+  storageBucket: "shopping-man-koji.firebasestorage.app",
+  messagingSenderId: "6538357349",
+  appId: "1:6538357349:web:8499dd7bf7bdcdbf2f748c"
+};

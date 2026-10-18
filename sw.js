@@ -2,7 +2,7 @@
 // Keeps a copy of the app on the phone so it opens in a store with no signal.
 // The list data itself is kept offline by Firebase; this only handles the app files.
 
-const VERSION = 'sm-v2-1';
+const VERSION = 'sm-v2-2';
 const FB = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const APP_FILES = [
   './', './index.html', './store.js', './firebase-config.js', './manifest.json',
