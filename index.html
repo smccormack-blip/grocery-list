@@ -8,7 +8,9 @@
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
     <title>Grocery List - Shopping Man Edition</title>
+    <script src="groceries.js"></script>
     <script type="module" src="store.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -860,6 +862,55 @@
         .sheet-error { color: #c0392b; text-align: center; margin-top: 12px; min-height: 18px; font-size: 14px; }
         .sheet-close { display: block; margin: 16px auto 0; background: none; border: none; color: #667eea;
             font-size: 16px; font-weight: 600; cursor: pointer; }
+        .btn-usuals { background: linear-gradient(135deg, #ffd54f, #ffb300); color: #4a3200; font-weight: 700; }
+        .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: -10px 0 16px; min-height: 0; }
+        .suggestion { border: 1px solid #c5cae9; background: #eef0ff; color: #3949ab; border-radius: 18px;
+            padding: 8px 14px; font-size: 15px; cursor: pointer; }
+        .list-section { margin: 16px 4px 6px; font-size: 14px; font-weight: 700; color: #5c6370; }
+        .list-section:first-child { margin-top: 0; }
+        .cat-link { background: none; border: none; padding: 0; color: #667eea; font-size: 12px; text-decoration: underline; cursor: pointer; }
+        .cat-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .cat-option { background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 12px 8px; font-size: 14px;
+            text-align: left; cursor: pointer; color: #2c3e50; }
+        .cat-option.current { border-color: #667eea; background: #eef0ff; font-weight: 700; }
+        .usual-row { display: flex; align-items: center; gap: 12px; background: white; border-radius: 10px; padding: 12px;
+            margin-top: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-size: 17px; color: #2c3e50; }
+        .usual-row input { width: 22px; height: 22px; flex: none; }
+        .usual-row span:nth-child(2) { flex: 1; }
+        .usual-cat { font-size: 12px; color: #8a8f98; }
+        .victory-modal .sound-button { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; border: 3px solid #fff; padding: 14px 28px;
+            border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 20; }
+        /* compact shopping list */
+        .progress-bar { height: 28px; margin: 8px 0 14px; }
+        .progress-fill { min-width: 90px; white-space: nowrap; font-size: 14px; }
+        .shopping-screen h1 { margin-bottom: 8px; }
+        .category-section { margin-bottom: 10px; }
+        .category-header { font-size: 15px; padding: 3px 10px; margin: 0 0 4px; border-left-width: 3px; text-shadow: 1px 1px 2px #000; }
+        .shopping-item { padding: 0; margin: 5px 0; border-radius: 10px; }
+        .shop-main { display: flex; align-items: center; flex: 1; padding: 9px 4px 9px 12px; cursor: pointer; min-width: 0; }
+        .shopping-item input[type="checkbox"] { width: 26px; height: 26px; margin-right: 12px; flex: none; }
+        .shopping-item span { font-size: 18px; }
+        .aisle-btn { flex: none; background: none; border: none; font-size: 22px; color: #9aa0a6; padding: 6px 14px; cursor: pointer; }
+        /* finale */
+        .finale { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column;
+            overflow: hidden; background: radial-gradient(circle at 50% 40%, #3a1c71, #0b0620 70%); }
+        .finale.show { display: flex; }
+        .finale-confetti span { position: absolute; top: -60px; animation: confettiFall linear infinite; }
+        @keyframes confettiFall { to { transform: translateY(115vh) rotate(540deg); } }
+        .finale-title { text-align: center; font-family: 'Arial Black', Impact, sans-serif; font-size: clamp(30px, 9vw, 58px); line-height: 1.15;
+            color: #ffd700; text-shadow: 3px 3px 0 #e53935, 6px 6px 0 #1e3a8a, 0 0 30px rgba(255,215,0,0.7); padding: 0 12px; z-index: 2;
+            transition: opacity 0.6s, transform 0.6s; }
+        .finale-title span { display: inline-block; animation: letterPop 0.6s cubic-bezier(.3,1.8,.5,1) both, letterBob 1.2s ease-in-out 0.8s infinite; }
+        @keyframes letterPop { from { transform: scale(0) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+        @keyframes letterBob { 50% { transform: translateY(-8px); } }
+        .finale.awkward .finale-title { opacity: 0.25; transform: scale(0.9); }
+        .finale.awkward .finale-confetti { opacity: 0.2; transition: opacity 1s; }
+        .finale-nerd { margin-top: 26px; font-family: 'Courier New', monospace; font-size: 22px; color: #e0f7fa; z-index: 2;
+            opacity: 0; transform: translateY(10px); transition: opacity 0.4s, transform 0.4s; padding: 0 16px; text-align: center; }
+        .finale-nerd.show { opacity: 1; transform: none; }
+        .victory-modal .skip-button { z-index: 30; }
+        .play-button small { font-size: 16px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -889,6 +940,7 @@
                 <button class="btn btn-secondary" onclick="showScreen('edit-screen')">
                     View List (<span id="item-count">0</span>)
                 </button>
+                <button class="btn btn-usuals" onclick="openUsuals()">⭐ Add the Usuals</button>
                 <button class="btn btn-share" onclick="inviteToList()">📨 Invite to List</button>
                 <button class="btn btn-tutorial" onclick="openTutorial()">❓ Tutorial</button>
             </div>
@@ -902,6 +954,7 @@
 
         <div id="quick-screen" class="screen">
             <h1>Quick Add Items</h1>
+            <button class="btn btn-usuals" style="width:100%;margin-bottom:16px" onclick="openUsuals()">⭐ Add the Usuals</button>
             <div class="quick-items" id="quick-items"></div>
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="addQuickItems()">Add Selected</button>
@@ -913,9 +966,11 @@
         <div id="edit-screen" class="screen">
             <h1>Current List</h1>
             <div class="manual-add">
-                <input type="text" id="manual-input" placeholder="Type item name...">
+                <input type="text" id="manual-input" placeholder="Type item name..." autocomplete="off">
                 <button onclick="addManualItem()">Add</button>
             </div>
+            <div class="suggestions" id="suggestions"></div>
+            <button class="btn btn-usuals" style="width:100%;margin-bottom:16px" onclick="openUsuals()">⭐ Add the Usuals</button>
             <div id="current-list"></div>
             <div class="action-buttons">
                 <button class="btn btn-secondary" onclick="showScreen('history-screen')">📜 Activity</button>
@@ -984,6 +1039,36 @@
         </div>
     </div>
 
+    <!-- Leave? -->
+    <div class="sheet-modal" id="exit-modal">
+        <div class="sheet">
+            <h2>Leave Shopping Man?</h2>
+            <p class="sheet-note">Your list is saved either way.</p>
+            <button class="btn btn-primary" onclick="stayInApp()">Stay</button>
+            <button class="btn btn-secondary" onclick="leaveApp()">Leave</button>
+        </div>
+    </div>
+
+    <!-- The usuals -->
+    <div class="sheet-modal" id="usuals-modal">
+        <div class="sheet">
+            <h2>⭐ The Usuals</h2>
+            <div id="usuals-body"></div>
+            <button id="usuals-add" class="btn btn-primary" onclick="addUsuals()">Add to list</button>
+            <button class="sheet-close" onclick="document.getElementById('usuals-modal').classList.remove('show')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Pick an aisle -->
+    <div class="sheet-modal" id="cat-modal">
+        <div class="sheet">
+            <h2 id="cat-title">Which aisle?</h2>
+            <p class="sheet-note">Shopping Man will remember this for everyone on the list.</p>
+            <div id="cat-options" class="cat-options"></div>
+            <button class="sheet-close" onclick="document.getElementById('cat-modal').classList.remove('show')">Cancel</button>
+        </div>
+    </div>
+
     <!-- Lists & people -->
     <div class="sheet-modal" id="lists-modal">
         <div class="sheet">
@@ -998,14 +1083,19 @@
         <div class="victory-container">
             <div class="play-overlay" id="play-overlay">
                 <button class="play-button" onclick="playVictoryVideo()">
-                    🎥 Tap to See Shopping Man's Victory!
+                    🦸‍♂️ Shopping Man saved the day!<br><small>Tap to watch</small>
                 </button>
             </div>
-            <video id="victory-video" playsinline>
+            <video id="victory-video" playsinline preload="auto">
                 <source src="victory.mp4" type="video/mp4">
             </video>
         </div>
         <button class="skip-button" onclick="closeVictoryVideo()" style="display: none;" id="skip-button">Skip</button>
+        <div class="finale" id="finale">
+            <div class="finale-confetti" id="finale-confetti"></div>
+            <div class="finale-title" id="finale-title"></div>
+            <div class="finale-nerd" id="finale-nerd"></div>
+        </div>
     </div>
 
     <!-- Tutorial Modal -->
@@ -1094,6 +1184,7 @@
         let items = {};          // id -> item
         let activity = [];       // newest first
         let members = [];
+        let listMeta = {};       // shared list settings, incl. recent shopping trips
         let firstItemsLoad = true;
         let sessionStart = Date.now();
         let syncState = { fromCache: false, pending: false };
@@ -1105,50 +1196,79 @@
 
         const defaultQuickItems = ['Eggs','Milk','Bread','Butter','Cheese','Chicken','Bananas','Apples','Lettuce','Tomatoes','Onions','Potatoes','Rice','Pasta','Coffee'];
 
-        // Category definitions for store sections
-        const itemCategories = {
-            // Produce
-            'apples': 'produce', 'bananas': 'produce', 'oranges': 'produce', 'grapes': 'produce',
-            'lettuce': 'produce', 'tomatoes': 'produce', 'onions': 'produce', 'potatoes': 'produce',
-            'carrots': 'produce', 'celery': 'produce', 'peppers': 'produce', 'cucumbers': 'produce',
-            'broccoli': 'produce', 'cauliflower': 'produce', 'spinach': 'produce', 'avocados': 'produce',
+        /* ---------- store sections & grocery dictionary (groceries.js) ---------- */
+        const SECTIONS = window.GROCERY_SECTIONS;
+        const categoryNames = Object.fromEntries(SECTIONS.map(x => [x.id, x.name]));
+        const categoryOrder = SECTIONS.map(x => x.id);
+        const DICT = new Map();   // normalized name -> { name, cat }
+        Object.entries(window.GROCERY_ITEMS).forEach(([cat, list]) => {
+            list.split(',').map(x => x.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean)
+                .forEach(n => { if (!DICT.has(n)) DICT.set(n, { name: n, cat }); });
+        });
+        const KEYWORDS = window.GROCERY_KEYWORDS.map(([kw, cat]) => [new RegExp('\\b' + kw.trim()), cat]);
 
-            // Dairy
-            'milk': 'dairy', 'eggs': 'dairy', 'butter': 'dairy', 'cheese': 'dairy',
-            'yogurt': 'dairy', 'cream': 'dairy', 'half and half': 'dairy', 'sour cream': 'dairy',
-            'cottage cheese': 'dairy', 'cream cheese': 'dairy',
+        function variants(n) {
+            const v = [n];
+            if (n.endsWith('ies')) v.push(n.slice(0, -3) + 'y');
+            if (n.endsWith('es')) v.push(n.slice(0, -2));
+            if (n.endsWith('s')) v.push(n.slice(0, -1));
+            else { v.push(n + 's', n + 'es'); if (n.endsWith('y')) v.push(n.slice(0, -1) + 'ies'); }
+            return v;
+        }
 
-            // Meat
-            'chicken': 'meat', 'beef': 'meat', 'pork': 'meat', 'turkey': 'meat',
-            'bacon': 'meat', 'sausage': 'meat', 'ham': 'meat', 'meat': 'meat',
-            'ground beef': 'meat', 'steak': 'meat', 'fish': 'meat', 'salmon': 'meat',
+        function dictLookup(n) {
+            for (const v of variants(n)) if (DICT.has(v)) return DICT.get(v);
+            return null;
+        }
 
-            // Bakery
-            'bread': 'bakery', 'bagels': 'bakery', 'muffins': 'bakery', 'croissants': 'bakery',
-            'donuts': 'bakery', 'rolls': 'bakery', 'tortillas': 'bakery',
+        // Optimal-string-alignment edit distance with an early exit above `max`.
+        function editDistance(a, b, max) {
+            if (Math.abs(a.length - b.length) > max) return max + 1;
+            let prev2 = null, prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+            for (let i = 1; i <= a.length; i++) {
+                const cur = [i];
+                let rowMin = i;
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    let d = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+                    if (prev2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d = Math.min(d, prev2[j - 2] + 1);
+                    cur[j] = d;
+                    if (d < rowMin) rowMin = d;
+                }
+                if (rowMin > max) return max + 1;
+                prev2 = prev; prev = cur;
+            }
+            return prev[b.length];
+        }
 
-            // Grocery (everything else)
-            'rice': 'grocery', 'pasta': 'grocery', 'cereal': 'grocery', 'coffee': 'grocery',
-            'tea': 'grocery', 'sugar': 'grocery', 'flour': 'grocery', 'oil': 'grocery',
-            'olive oil': 'grocery', 'salt': 'grocery', 'pepper': 'grocery',
-            'ketchup': 'grocery', 'mustard': 'grocery', 'mayo': 'grocery', 'hot sauce': 'grocery',
-            'soy sauce': 'grocery', 'bouillon cubes': 'grocery', 'canned goods': 'grocery',
-            'soup': 'grocery', 'beans': 'grocery', 'cat food': 'grocery', 'dog food': 'grocery',
-            'peanut butter': 'grocery', 'jelly': 'grocery', 'jam': 'grocery',
-            'orange juice': 'grocery', 'apple juice': 'grocery', 'soda': 'grocery',
-            'water': 'grocery', 'chips': 'grocery', 'cookies': 'grocery', 'crackers': 'grocery',
-            'ice cream': 'grocery', 'frozen': 'grocery'
-        };
+        // Closest dictionary item for a misspelling, or null if nothing is clearly close.
+        function fuzzyMatch(n) {
+            if (n.length < 4 || dictLookup(n)) return null;
+            const max = n.length <= 6 ? 1 : n.length <= 10 ? 2 : 3;
+            let best = null, bestD = max + 1, tie = false;
+            for (const [k, e] of DICT) {
+                let d = editDistance(n, k, max);
+                if (k.endsWith('s')) d = Math.min(d, editDistance(n, k.slice(0, -1), max));
+                if (k.endsWith('ies')) d = Math.min(d, editDistance(n, k.slice(0, -3) + 'y', max));
+                if (d < bestD) { best = e; bestD = d; tie = false; }
+                else if (d === bestD && best && e.name !== best.name && e.name !== best.name + 's' && e.name + 's' !== best.name) tie = true;
+            }
+            return best && bestD <= max && !tie ? best : null;
+        }
 
-        const categoryNames = {
-            'produce': '🥬 Produce',
-            'dairy': '🥛 Dairy',
-            'meat': '🥩 Meat',
-            'bakery': '🥖 Bakery',
-            'grocery': '🛒 Grocery'
-        };
-
-        const categoryOrder = ['produce', 'dairy', 'meat', 'bakery', 'grocery'];
+        // Suggestions while typing: the family's own items first, then the dictionary.
+        function suggest(text, limit = 6) {
+            const n = norm(text);
+            if (n.length < 2) return [];
+            const out = [], seen = new Set();
+            const push = name => { const k = norm(name); if (!seen.has(k) && items[itemId(name)]?.status !== 'active') { seen.add(k); out.push(name); } };
+            Object.values(items).filter(i => (i.addCount || 0) > 0 && i.norm && i.norm.startsWith(n))
+                .sort((a, b) => b.addCount - a.addCount).forEach(i => push(i.name));
+            for (const k of DICT.keys()) { if (out.length >= limit) break; if (k.startsWith(n)) push(k); }
+            for (const k of DICT.keys()) { if (out.length >= limit) break; if (k.includes(' ' + n)) push(k); }
+            if (out.length < limit) { const f = fuzzyMatch(n); if (f) push(f.name); }
+            return out.slice(0, limit);
+        }
 
         /* ---------- small helpers ---------- */
 
@@ -1166,8 +1286,24 @@
             return 'x' + Array.from(n).map(c => c.codePointAt(0).toString(16)).join('');
         }
 
-        function getCategory(itemName) {
-            return itemCategories[norm(itemName)] || 'grocery';
+        // Store section for an item: the family's choice if someone set one, else the dictionary, else a guess.
+        // The last word decides ("peanut butter pretzels" are pretzels, not butter).
+        function getCategory(itemOrName) {
+            const name = typeof itemOrName === 'string' ? itemOrName : itemOrName.name;
+            const it = typeof itemOrName === 'string' ? items[itemId(itemOrName)] : itemOrName;
+            if (it && it.category && categoryNames[it.category]) return it.category;
+            const n = norm(name);
+            const words = n.split(' ');
+            if (words.length > 1 && words[0] === 'frozen') return 'frozen';
+            if (words.length > 1 && words[0] === 'canned') return 'canned';
+            for (let k = 0; k < words.length; k++) {        // whole name, then shorter endings
+                const d = dictLookup(words.slice(k).join(' '));
+                if (d) return d.cat;
+            }
+            const last = words[words.length - 1];
+            for (const [re, cat] of KEYWORDS) if (re.test(last)) return cat;
+            for (const [re, cat] of KEYWORDS) if (re.test(n)) return cat;
+            return 'other';
         }
 
         function ago(ms) {
@@ -1189,12 +1325,12 @@
                 .sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
         }
 
+        // Removed items stay crossed out (with who removed them) until the next shopping trip, or a week.
         function crossedItems() {
             const cutoff = Date.now() - KEEP_CROSSED_DAYS * 86400000;
             return Object.values(items)
-                .filter(i => (i.status === 'removed' && i.removedAt > cutoff) ||
-                             (i.status === 'bought' && i.boughtAt > cutoff))
-                .sort((a, b) => (b.removedAt || b.boughtAt || 0) - (a.removedAt || a.boughtAt || 0));
+                .filter(i => i.status === 'removed' && i.removedAt > cutoff)
+                .sort((a, b) => (b.removedAt || 0) - (a.removedAt || 0));
         }
 
         function getLists() { try { return JSON.parse(localStorage.getItem(LS.lists)) || []; } catch (e) { return []; } }
@@ -1255,8 +1391,15 @@
             checkMicPermission();
             setupVoiceRecognition();
             registerServiceWorker();
-            window.addEventListener('online', renderSyncBadge);
+            window.addEventListener('online', () => { renderSyncBadge(); resync(); });
             window.addEventListener('offline', renderSyncBadge);
+            // Phones pause the connection while the app is in the background; reconnect right away on return.
+            let hiddenAt = 0;
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) { hiddenAt = Date.now(); return; }
+                if (Date.now() - hiddenAt > 3000) resync();
+            });
+            window.addEventListener('pageshow', e => { if (e.persisted) resync(); });
             window.addEventListener('store-error', () => showToast('⚠️ A change could not be saved. Check you are still on this list.'));
 
             if (store.mode === 'local') document.getElementById('demo-banner').classList.add('show');
@@ -1294,7 +1437,7 @@
             listCode = code;
             listName = entry ? entry.name : 'Shared list';
             localStorage.setItem(LS.current, code);
-            items = {}; activity = []; members = []; firstItemsLoad = true;
+            items = {}; activity = []; members = []; listMeta = {}; firstItemsLoad = true;
             document.getElementById('list-title').textContent = `🛒 ${listName}`;
             updateUI();
             store.watch(code, {
@@ -1309,12 +1452,21 @@
                     if (document.getElementById('history-screen').classList.contains('active')) showHistory();
                     checkForNewTrip();
                 },
-                onMembers(rows) {
-                    members = rows;
-                    // Pick up a renamed list from the server copy if we ever store it there.
-                },
+                onMembers(rows) { members = rows; },
+                onMeta(meta) { listMeta = meta || {}; },
                 onStatus(s) { syncState = s; renderSyncBadge(); },
             });
+        }
+
+        let resyncing = false;
+        async function resync() {
+            if (resyncing || !listCode || !store.refresh || !navigator.onLine) return;
+            resyncing = true;
+            const el = document.getElementById('sync-badge');
+            el.textContent = '↻ Syncing…'; el.className = 'sync-badge syncing';
+            try { await store.refresh(); } catch (e) { console.log('resync', e); }
+            resyncing = false;
+            setTimeout(renderSyncBadge, 1500);
         }
 
         function renderSyncBadge() {
@@ -1620,16 +1772,25 @@
 
         let undoTimer = null;
 
-        function addItem(name, silent = false) {
+        function addItem(name, silent = false, opts = {}) {
             if (!name || !listCode) return false;
             name = name.trim();
+            const typed = name;
+
+            // Spelling help: "bananna" -> "bananas" (unless the family already uses that spelling)
+            let fixed = false;
+            if (!opts.noFix && !items[itemId(name)]) {
+                const f = fuzzyMatch(norm(name));
+                if (f) { name = f.name; fixed = true; }
+            }
+
             const n = norm(name);
             const id = itemId(name);
             const existing = items[id];
             const active = activeItems();
 
             if (existing && existing.status === 'active') {
-                if (!silent) showToast(`"${name}" already on list`);
+                if (!silent) showToast(`"${display(existing)}" already on list`);
                 return false;
             }
 
@@ -1646,12 +1807,14 @@
                 }
             }
 
+            const now = Date.now();
             const before = existing ? { ...existing } : null;
             const [, logId] = commit([
                 { col: 'items', id, data: {
-                    name: existing && existing.status !== 'cleared' ? existing.name : name, norm: n,
-                    qty: 1, status: 'active', inCart: false, cartBy: undefined,
-                    addedBy: me.name, addedUid: me.uid, addedAt: Date.now(),
+                    name: existing && existing.status !== 'cleared' ? existing.name : (existing?.name || name), norm: n,
+                    qty: 1, status: 'active', inCart: false, cartBy: undefined, cartUid: undefined,
+                    addedBy: me.name, addedUid: me.uid, addedAt: now,
+                    recentAdds: [now, ...((existing && existing.recentAdds) || [])].slice(0, 12),
                     removedBy: undefined, removedUid: undefined, removedAt: undefined,
                     boughtBy: undefined, boughtUid: undefined, boughtAt: undefined,
                 }, inc: { addCount: 1 } },
@@ -1660,24 +1823,32 @@
 
             if (!silent) {
                 playSound('yum');
-                showToast(`Added: ${name}`, { label: 'Undo', fn: () => undoAdd(id, before, logId) });
+                const shown = name.charAt(0).toUpperCase() + name.slice(1);
+                if (fixed) {
+                    showToast(`Added ${shown} (you typed “${typed}”)`, { label: `Keep “${typed}”`, fn: () => {
+                        undoAdd(id, before, logId, true);
+                        addItem(typed, false, { noFix: true });
+                    } });
+                } else {
+                    showToast(`Added: ${shown}`, { label: 'Undo', fn: () => undoAdd(id, before, logId) });
+                }
             }
             return true;
         }
 
         // Quietly takes back an add made by mistake, so it doesn't clutter the history.
-        function undoAdd(id, before, logId) {
+        function undoAdd(id, before, logId, quiet) {
             const ops = [{ col: 'activity', id: logId, del: true }];
             if (before) {
                 const restore = {};
-                ['name','qty','status','inCart','cartBy','addedBy','addedUid','addedAt','removedBy','removedUid','removedAt','boughtBy','boughtUid','boughtAt']
+                ['name','qty','status','inCart','cartBy','cartUid','addedBy','addedUid','addedAt','recentAdds','removedBy','removedUid','removedAt','boughtBy','boughtUid','boughtAt']
                     .forEach(k => { restore[k] = before[k]; });
                 ops.push({ col: 'items', id, data: restore, inc: { addCount: -1 } });
             } else {
                 ops.push({ col: 'items', id, data: { status: 'cleared', addedAt: 0 }, inc: { addCount: -1 } });
             }
             commit(ops);
-            showToast('Undone');
+            if (!quiet) showToast('Undone');
         }
 
         function changeQty(id, delta) {
@@ -1729,38 +1900,102 @@
             const act = activeItems();
             const crossed = crossedItems();
             if (!act.length && !crossed.length) {
-                list.innerHTML = '<div class="empty-state">Your list is empty.<br>Add items using voice or quick add!</div>';
+                list.innerHTML = '<div class="empty-state">Your list is empty.<br>Add items using voice, typing, or ⭐ Add the Usuals!</div>';
                 return;
             }
             let html = '';
-            act.forEach(it => {
-                const qty = it.qty || 1;
-                html += `<div class="list-item">
-                    <div class="item-main">
-                        <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}</span>
-                        <div class="item-meta">added by ${esc(who(it.addedBy, it.addedUid))} · ${ago(it.addedAt)}</div>
-                    </div>
-                    <span class="qty-controls"><button class="qty-btn" onclick="changeQty('${it.id}',-1)">&minus;</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="changeQty('${it.id}',1)">+</button></span>
-                    <button class="remove-btn" onclick="removeItem('${it.id}')">Remove</button>
-                </div>`;
-            });
-            if (crossed.length) {
-                html += `<div class="crossed-header">Recently removed &amp; bought</div>`;
-                crossed.forEach(it => {
-                    const bought = it.status === 'bought';
-                    const how = bought
-                        ? `got by ${esc(who(it.boughtBy, it.boughtUid))} · ${ago(it.boughtAt)}`
-                        : `removed by ${esc(who(it.removedBy, it.removedUid))} · ${ago(it.removedAt)}`;
-                    html += `<div class="list-item deleted ${bought ? 'bought' : ''}">
+            {
+                act.forEach(it => {
+                    const qty = it.qty || 1;
+                    html += `<div class="list-item">
                         <div class="item-main">
-                            <span>${bought ? '✓ ' : ''}${esc(display(it))}</span>
-                            <div class="item-meta">${it.addedBy ? `added by ${esc(who(it.addedBy, it.addedUid))} · ` : ''}${how}</div>
+                            <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}</span>
+                            <div class="item-meta">added by ${esc(who(it.addedBy, it.addedUid))} · ${ago(it.addedAt)}</div>
                         </div>
-                        <button class="remove-btn" onclick="restoreItem('${it.id}')">${bought ? 'Need more' : 'Restore'}</button>
+                        <span class="qty-controls"><button class="qty-btn" onclick="changeQty('${it.id}',-1)">&minus;</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="changeQty('${it.id}',1)">+</button></span>
+                        <button class="remove-btn" onclick="removeItem('${it.id}')">Remove</button>
+                    </div>`;
+                });
+            }
+            if (crossed.length) {
+                html += `<div class="crossed-header">Removed</div>`;
+                crossed.forEach(it => {
+                    html += `<div class="list-item deleted">
+                        <div class="item-main">
+                            <span>${esc(display(it))}</span>
+                            <div class="item-meta">${it.addedBy ? `added by ${esc(who(it.addedBy, it.addedUid))} · ` : ''}removed by ${esc(who(it.removedBy, it.removedUid))} · ${ago(it.removedAt)}</div>
+                        </div>
+                        <button class="remove-btn" onclick="restoreItem('${it.id}')">Restore</button>
                     </div>`;
                 });
             }
             list.innerHTML = html;
+        }
+
+        // Move an item to a different aisle; remembered for the whole family.
+        function pickCategory(id) {
+            const it = items[id];
+            if (!it) return;
+            const cur = getCategory(it);
+            document.getElementById('cat-title').textContent = `Which aisle is ${display(it)} in?`;
+            document.getElementById('cat-options').innerHTML = SECTIONS.map(x =>
+                `<button class="cat-option ${x.id === cur ? 'current' : ''}" onclick="setCategory('${id}','${x.id}')">${x.name}</button>`).join('');
+            document.getElementById('cat-modal').classList.add('show');
+        }
+
+        function setCategory(id, cat) {
+            document.getElementById('cat-modal').classList.remove('show');
+            const it = items[id];
+            if (!it) return;
+            commit([{ col: 'items', id, data: { category: cat } }]);
+            showToast(`${display(it)} → ${categoryNames[cat]}`);
+        }
+
+        /* ---------- the usuals ---------- */
+        // Bought on at least 3 of the last 6 trips. Until there are 3 trips, fall back to items added 3+ times in 8 weeks.
+        function usualItems() {
+            const trips = (listMeta.recentTrips || []).slice(0, 6);
+            const counts = {};
+            let ids;
+            if (trips.length >= 3) {
+                trips.forEach(t => (t.ids || []).forEach(id => { counts[id] = (counts[id] || 0) + 1; }));
+                ids = Object.keys(counts).filter(id => counts[id] >= 3);
+            } else {
+                const since = Date.now() - 8 * 7 * 86400000;
+                Object.values(items).forEach(i => { counts[i.id] = (i.recentAdds || []).filter(t => t > since).length; });
+                ids = Object.keys(counts).filter(id => counts[id] >= 3);
+            }
+            return ids.map(id => items[id]).filter(i => i && i.name && i.status !== 'active')
+                .sort((a, b) => (counts[b.id] - counts[a.id]) || a.name.localeCompare(b.name));
+        }
+
+        function openUsuals() {
+            const list = usualItems();
+            const trips = (listMeta.recentTrips || []).length;
+            const body = document.getElementById('usuals-body');
+            if (!list.length) {
+                const onList = Object.keys(items).length && activeItems().length;
+                body.innerHTML = `<p class="sheet-note">${trips >= 3 || onList
+                    ? 'All your usuals are already on the list (or nothing has been bought often enough yet).'
+                    : 'No usuals yet. Shopping Man learns them as you shop: anything bought on 3 of the last 6 trips shows up here.'}</p>`;
+                document.getElementById('usuals-add').style.display = 'none';
+            } else {
+                body.innerHTML = `<p class="sheet-note">${trips >= 3 ? 'Bought on at least 3 of your last 6 trips.' : 'Added 3 or more times in the last 8 weeks.'} Untick anything you don't need.</p>`
+                    + list.map((it, i) => `<label class="usual-row"><input type="checkbox" checked value="${esc(it.id)}"><span>${esc(display(it))}</span><span class="usual-cat">${categoryNames[getCategory(it)]}</span></label>`).join('');
+                document.getElementById('usuals-add').style.display = 'block';
+            }
+            document.getElementById('usuals-modal').classList.add('show');
+        }
+
+        function addUsuals() {
+            let added = 0;
+            document.querySelectorAll('#usuals-body input:checked').forEach(cb => {
+                const it = items[cb.value];
+                if (it && addItem(it.name, true, { noFix: true })) added++;
+            });
+            document.getElementById('usuals-modal').classList.remove('show');
+            if (added) playSound('yum');
+            showToast(added ? `⭐ Added ${added} usual${added > 1 ? 's' : ''}` : 'Nothing added');
         }
 
         function updateQuickAdd() {
@@ -1798,7 +2033,23 @@
             if (input.value.trim()) {
                 addItem(input.value.trim());
                 input.value = '';
+                renderSuggestions();
             }
+        }
+
+        function renderSuggestions() {
+            const input = document.getElementById('manual-input');
+            const box = document.getElementById('suggestions');
+            const list = suggest(input.value);
+            box.innerHTML = list.map(n => `<button class="suggestion" data-name="${esc(n)}">${esc(n.charAt(0).toUpperCase() + n.slice(1))}</button>`).join('');
+        }
+
+        function pickSuggestion(name) {
+            const input = document.getElementById('manual-input');
+            addItem(name, false, { noFix: true });
+            input.value = '';
+            renderSuggestions();
+            input.focus();
         }
 
         function emailList() {
@@ -1866,7 +2117,7 @@
 
             const byCat = {};
             categoryOrder.forEach(cat => byCat[cat] = []);
-            act.forEach(it => byCat[getCategory(it.name)].push(it));
+            act.forEach(it => byCat[getCategory(it)].push(it));
 
             let html = '';
             categoryOrder.forEach(category => {
@@ -1876,10 +2127,13 @@
                 list.forEach(it => {
                     const qty = it.qty || 1;
                     const helper = it.inCart && it.cartUid !== me.uid ? ` <span class="cart-by">(${esc(it.cartBy || 'someone')} has it)</span>` : '';
-                    html += `<label class="shopping-item ${it.inCart ? 'checked' : ''}">
-                        <input type="checkbox" ${it.inCart ? 'checked' : ''} onchange="toggleShoppingItem('${it.id}')">
-                        <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}${helper}</span>
-                    </label>`;
+                    html += `<div class="shopping-item ${it.inCart ? 'checked' : ''}">
+                        <label class="shop-main">
+                            <input type="checkbox" ${it.inCart ? 'checked' : ''} onchange="toggleShoppingItem('${it.id}')">
+                            <span>${qty > 1 ? qty + ' ' : ''}${esc(display(it))}${helper}</span>
+                        </label>
+                        <button class="aisle-btn" onclick="pickCategory('${it.id}')" aria-label="Move to another aisle">⋮</button>
+                    </div>`;
                 });
                 html += `</div>`;
             });
@@ -1918,16 +2172,19 @@
             const left = act.filter(i => !i.inCart);
             const now = Date.now();
             const ops = [];
+            // Bought items disappear from the list (the Activity screen keeps the record).
             got.forEach(i => ops.push({ col: 'items', id: i.id, data: {
-                status: 'bought', boughtBy: me.name, boughtUid: me.uid, boughtAt: now, inCart: false } }));
-            // Items bought on earlier trips have done their job; tidy them away.
-            // Removed items stay crossed out (for up to a week) so everyone can see who removed what.
-            Object.values(items).filter(i => i.status === 'bought')
+                status: 'cleared', boughtBy: me.name, boughtUid: me.uid, boughtAt: now, inCart: false, cartBy: undefined, cartUid: undefined } }));
+            // A new trip wipes the slate: removed items go too.
+            Object.values(items).filter(i => i.status === 'removed' || i.status === 'bought')
                 .forEach(i => ops.push({ col: 'items', id: i.id, data: { status: 'cleared' } }));
+            // Remember the last 6 trips for "Add the Usuals".
+            const trips = [{ at: now, ids: got.map(i => i.id) }, ...(listMeta.recentTrips || [])].slice(0, 6);
+            ops.push({ col: 'list', data: { recentTrips: trips } });
             ops.push(logEntry('trip', { items: got.map(i => i.name), left: left.map(i => i.name) }));
             const ids = commit(ops);
             localStorage.setItem(LS.seenTrip + me.uid + '_' + listCode, ids[ids.length - 1]);
-            celebrate(`🦸‍♂️ Food duties fulfilled! ${got.length} item(s) bought.`);
+            celebrate(`🦸‍♂️ Food duties fulfilled! ${got.length} item(s) bought.`, true);
             showScreen('voice-screen');
         }
 
@@ -1939,13 +2196,13 @@
             localStorage.setItem(key, trip ? trip.id : 'none');
             if (seen === null) return;            // first look at this list: don't replay old trips
             if (!trip || trip.id === seen) return;
-            if (trip.uid === me.uid || trip.at < sessionStart - 6 * 3600000) return;
-            celebrate(`🦸‍♂️ ${trip.by || 'Shopping Man'} saved the day! Got: ${(trip.items || []).join(', ')}`);
+            if (trip.uid === me.uid || trip.at < Date.now() - 2 * 86400000) return;
+            celebrate(`🦸‍♂️ ${trip.by || 'Shopping Man'} saved the day! Got: ${(trip.items || []).join(', ')}`, false, trip.at);
         }
 
-        function celebrate(msg) {
+        function celebrate(msg, mine, when) {
             if (!navigator.onLine) { showToast(msg); return; }  // the video isn't stored for offline use
-            showVictoryVideo(() => showToast(msg));
+            playVictory(!!mine, () => showToast(msg), when || Date.now());
         }
 
         function showScreen(id) {
@@ -1998,70 +2255,183 @@
         }
 
         // Victory Video functions
-        function showVictoryVideo(callback) {
+        // Sequence: victory video, then a fanciful "Shopping Man Saves the Day" title,
+        // an awkward pause, and a nerdy voice reading out the date of the rescue.
+        // withSound: started by a tap on this phone, so it can play right away with sound.
+        // Otherwise a big "Tap to watch" button appears first (phones only allow sound after a tap).
+        let victoryWhen = 0, finaleTimers = [];
+
+        function unlockSpeech() {
+            try { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
+        }
+
+        function playVictory(withSound, callback, when) {
             const modal = document.getElementById('victory-modal');
             const video = document.getElementById('victory-video');
-            const overlay = document.getElementById('play-overlay');
-            const skipButton = document.getElementById('skip-button');
-            
+            victoryWhen = when || Date.now();
+            window.victoryCallback = callback || null;
+            document.getElementById('finale').classList.remove('show');
+            document.querySelector('.victory-container').style.display = '';
             modal.classList.add('show');
-            video.currentTime = 0;
-            overlay.classList.remove('hidden');
-            skipButton.style.display = 'none';
-            
-            // Store callback for later
-            window.victoryCallback = callback;
+            document.getElementById('skip-button').style.display = 'block';
+            video.onended = showFinale;
+            video.onerror = showFinale;
+            try { video.currentTime = 0; } catch (e) {}
+            if (withSound) { unlockSpeech(); startVictoryVideo(); }
+            else document.getElementById('play-overlay').classList.remove('hidden');
         }
 
-        function playVictoryVideo() {
+        function startVictoryVideo() {
             const video = document.getElementById('victory-video');
-            const overlay = document.getElementById('play-overlay');
-            const skipButton = document.getElementById('skip-button');
-            
-            // Hide play button overlay
-            overlay.classList.add('hidden');
-            
-            // Show skip button
-            skipButton.style.display = 'block';
-            
-            // Play video with sound
+            document.getElementById('play-overlay').classList.add('hidden');
             video.muted = false;
-            video.play().catch(() => {
-                // If fails, try muted
-                video.muted = true;
-                video.play();
-            });
-            
-            // Auto-close when video ends
-            video.onended = () => {
-                closeVictoryVideo();
-            };
+            video.play().catch(() => { video.muted = true; video.play().catch(showFinale); });
         }
 
-        function closeVictoryVideo() {
-            const modal = document.getElementById('victory-modal');
+        // The big "Tap to watch" button
+        function playVictoryVideo() { unlockSpeech(); startVictoryVideo(); }
+
+        // Old name kept for safety
+        function showVictoryVideo(callback) { playVictory(false, callback); }
+
+        function nerdyDate(ms) {
+            const d = new Date(ms);
+            const day = d.getDate();
+            const suf = (day % 100 >= 11 && day % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th');
+            return `On ${d.toLocaleString('en-US', { month: 'long' })} ${day}${suf}, ${d.getFullYear()}.`;
+        }
+
+        function showFinale() {
             const video = document.getElementById('victory-video');
-            const overlay = document.getElementById('play-overlay');
-            const skipButton = document.getElementById('skip-button');
-            
-            modal.classList.remove('show');
             video.pause();
-            video.currentTime = 0;
-            overlay.classList.remove('hidden');
-            skipButton.style.display = 'none';
-            
-            // Call the callback if it exists
-            if (window.victoryCallback) {
-                window.victoryCallback();
-                window.victoryCallback = null;
+            document.querySelector('.victory-container').style.display = 'none';
+            const fin = document.getElementById('finale');
+            const title = document.getElementById('finale-title');
+            const nerd = document.getElementById('finale-nerd');
+            let n = 0;
+            title.innerHTML = ['SHOPPING MAN', 'SAVES THE DAY!'].map(line => line.split('').map(ch =>
+                `<span style="animation-delay:${(n++ * 0.045).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')).join('<br>');
+            nerd.textContent = '';
+            nerd.classList.remove('show');
+            fin.classList.add('show');
+            fin.classList.remove('awkward');
+            launchConfetti();
+            const date = nerdyDate(victoryWhen);
+            finaleTimers.push(setTimeout(() => fin.classList.add('awkward'), 3200));          // ...awkward silence...
+            finaleTimers.push(setTimeout(() => {
+                nerd.textContent = '🤓 ' + date;
+                nerd.classList.add('show');
+                speakNerdy(date, () => finaleTimers.push(setTimeout(closeVictoryVideo, 1800)));
+            }, 5400));
+        }
+
+        function speakNerdy(text, done) {
+            let finished = false;
+            const end = () => { if (!finished) { finished = true; done(); } };
+            finaleTimers.push(setTimeout(end, 7000));   // in case the phone has no voice
+            try {
+                if (!('speechSynthesis' in window)) return;
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.pitch = 2;        // squeaky
+                u.rate = 0.78;      // ...slowly...and...precisely
+                const voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+                const pick = voices.find(v => /male|david|daniel|fred|alex/i.test(v.name)) || voices[0];
+                if (pick) u.voice = pick;
+                u.onend = end; u.onerror = end;
+                speechSynthesis.speak(u);
+            } catch (e) { end(); }
+        }
+
+        function launchConfetti() {
+            const box = document.getElementById('finale-confetti');
+            box.innerHTML = '';
+            const bits = ['🦄', '🐱', '⭐', '🛒', '✨', '🥕', '🍌', '🧀', '🦸‍♂️', '🎉'];
+            for (let i = 0; i < 34; i++) {
+                const el = document.createElement('span');
+                el.textContent = bits[i % bits.length];
+                el.style.left = Math.random() * 100 + '%';
+                el.style.animationDelay = (Math.random() * 1.5).toFixed(2) + 's';
+                el.style.animationDuration = (2.5 + Math.random() * 2.5).toFixed(2) + 's';
+                el.style.fontSize = (22 + Math.random() * 26) + 'px';
+                box.appendChild(el);
             }
         }
 
-        let touchX = 0;
-        document.addEventListener('touchstart', e => touchX = e.changedTouches[0].screenX);
+        function closeVictoryVideo() {
+            finaleTimers.forEach(clearTimeout); finaleTimers = [];
+            try { speechSynthesis.cancel(); } catch (e) {}
+            const modal = document.getElementById('victory-modal');
+            const video = document.getElementById('victory-video');
+            modal.classList.remove('show');
+            video.pause();
+            try { video.currentTime = 0; } catch (e) {}
+            document.getElementById('play-overlay').classList.add('hidden');
+            document.getElementById('skip-button').style.display = 'none';
+            document.getElementById('finale').classList.remove('show');
+            document.querySelector('.victory-container').style.display = '';
+            if (window.victoryCallback) {
+                const cb = window.victoryCallback;
+                window.victoryCallback = null;
+                cb();
+            }
+        }
+
+        /* ---------- back button / back swipe ---------- */
+        // Back closes pop-ups, then steps back through the screens, then asks before leaving.
+        let backArmed = false;
+        function armBack() {
+            if (backArmed) return;
+            backArmed = true;
+            history.pushState({ sm: 'guard' }, '');
+        }
+        // Chrome only honors this after the person has touched the page.
+        ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, armBack, { capture: true }));
+
+        window.addEventListener('popstate', () => {
+            if (!backArmed) return;
+            backArmed = false;
+            const open = document.querySelector('.sheet-modal.show, .tutorial-modal.show, .victory-modal.show');
+            if (open) {
+                if (open.id === 'victory-modal') closeVictoryVideo();
+                else if (open.id === 'tutorial-modal') closeTutorial();
+                else if (open.id === 'exit-modal') return leaveApp();   // second back = leave
+                else if (open.id !== 'join-modal') open.classList.remove('show');
+                return armBack();
+            }
+            const active = document.querySelector('.screen.active').id;
+            const prev = { 'quick-screen': 'voice-screen', 'edit-screen': 'quick-screen', 'shopping-screen': 'edit-screen', 'history-screen': 'edit-screen' }[active];
+            if (prev) { showScreen(prev); return armBack(); }
+            document.getElementById('exit-modal').classList.add('show');
+            armBack();
+        });
+
+        function stayInApp() { document.getElementById('exit-modal').classList.remove('show'); }
+
+        function leaveApp() {
+            document.getElementById('exit-modal').classList.remove('show');
+            backArmed = false;
+            history.go(-2);
+            setTimeout(() => { try { window.close(); } catch (e) {} }, 300);
+            setTimeout(() => { if (!document.hidden) showToast('Swipe back once more to leave'); }, 700);
+        }
+
+        // Swipe between screens — only for a clearly sideways swipe, so scrolling down never changes screens.
+        let touchX = 0, touchY = 0, touchT = 0, touchOk = false;
+        document.addEventListener('touchstart', e => {
+            const t = e.changedTouches[0];
+            touchX = t.screenX; touchY = t.screenY; touchT = Date.now();
+            touchOk = e.touches.length === 1 &&
+                !e.target.closest('input, textarea, select, .suggestions') &&
+                !document.querySelector('.sheet-modal.show, .tutorial-modal.show, .victory-modal.show');
+        }, { passive: true });
         document.addEventListener('touchend', e => {
-            const diff = touchX - e.changedTouches[0].screenX;
-            if (Math.abs(diff) < 50) return;
+            if (!touchOk) return;
+            const t = e.changedTouches[0];
+            const diff = touchX - t.screenX;
+            const dy = touchY - t.screenY;
+            if (Math.abs(diff) < 90 || Math.abs(diff) < 2.5 * Math.abs(dy) || Date.now() - touchT > 800) return;
             const active = document.querySelector('.screen.active').id;
             if (diff > 0) {
                 if (active === 'voice-screen') showScreen('quick-screen');
@@ -2072,6 +2442,12 @@
                 else if (active === 'edit-screen') showScreen('quick-screen');
                 else if (active === 'quick-screen') showScreen('voice-screen');
             }
+        });
+
+        document.addEventListener('input', e => { if (e.target.id === 'manual-input') renderSuggestions(); });
+        document.addEventListener('click', e => {
+            const b = e.target.closest('.suggestion');
+            if (b) pickSuggestion(b.dataset.name);
         });
 
         document.addEventListener('keypress', e => {
@@ -2322,32 +2698,9 @@
         }
 
         // Tutorial video functions
+        // Plays the real victory video full screen (the tap on the button allows sound).
         function playTutorialVideo() {
-            const video = document.getElementById('tutorial-victory-video');
-            const playOverlay = document.getElementById('tutorial-play-overlay');
-            const skipButton = document.getElementById('tutorial-skip-video');
-            
-            // Hide play button
-            playOverlay.classList.add('hidden');
-            
-            // Show skip button
-            skipButton.style.display = 'block';
-            
-            // Play video with sound
-            video.muted = false;
-            video.play().catch(() => {
-                // If fails, try muted
-                video.muted = true;
-                video.play();
-            });
-            
-            // Auto-reset when video ends
-            video.onended = () => {
-                video.currentTime = 0;
-                video.pause();
-                playOverlay.classList.remove('hidden');
-                skipButton.style.display = 'none';
-            };
+            playVictory(true, null, Date.now());
         }
 
         function stopTutorialVideo() {
