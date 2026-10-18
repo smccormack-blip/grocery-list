@@ -12,7 +12,8 @@
 //   lists/{code}/activity/{id}   { type, item, items, by, uid, at }
 //
 // commit(code, ops) applies a batch of writes. Each op:
-//   { col: 'items'|'activity'|'members', id?: string, data?: object,
+//   { col: 'items'|'activity'|'members'|'list', id?: string, data?: object,
+//   ('list' writes to the list document itself, e.g. recentTrips)
 //     inc?: { field: n }, del?: true }
 // An activity op without an id gets an auto id. commit() returns the ids written.
 
@@ -70,7 +71,7 @@ class FirebaseStore {
 
   ref(code, col, id) {
     const { doc, collection } = this.fs;
-    if (!col) return doc(this.db, 'lists', code);
+    if (!col || col === 'list') return doc(this.db, 'lists', code);
     return id ? doc(this.db, 'lists', code, col, id) : doc(collection(this.db, 'lists', code, col));
   }
 
@@ -98,9 +99,12 @@ class FirebaseStore {
     try { await this.fs.deleteDoc(this.ref(code, 'members', this.uid)); } catch (e) { /* offline is fine */ }
   }
 
-  watch(code, { onItems, onActivity, onMembers, onStatus }) {
+  watch(code, { onItems, onActivity, onMembers, onMeta, onStatus }) {
     this.unwatch();
     const { onSnapshot, collection, query, orderBy, limit } = this.fs;
+    this.unsubs.push(onSnapshot(this.ref(code), snap => {
+      onMeta && onMeta(snap.exists() ? snap.data() : {});
+    }, err => console.error('list', err)));
     const col = name => collection(this.db, 'lists', code, name);
     const status = snap => onStatus && onStatus({
       fromCache: snap.metadata.fromCache,
@@ -119,6 +123,12 @@ class FirebaseStore {
   }
 
   unwatch() { this.unsubs.forEach(u => u()); this.unsubs = []; }
+
+  // Drop and re-open the connection (used when the app comes back from the background).
+  async refresh() {
+    await this.fs.disableNetwork(this.db);
+    await this.fs.enableNetwork(this.db);
+  }
 
   commit(code, ops) {
     const { writeBatch, increment, deleteField } = this.fs;
@@ -217,6 +227,7 @@ class LocalStore {
       w.onItems(rows(l.items));
       w.onActivity(rows(l.activity).sort((a, b) => b.at - a.at).slice(0, 300));
       w.onMembers && w.onMembers(rows(l.members));
+      w.onMeta && w.onMeta(l.meta || {});
       w.onStatus && w.onStatus({ fromCache: false, pending: false });
     }, 0);
   }
@@ -226,6 +237,11 @@ class LocalStore {
     const l = this.list(db, code);
     const ids = [];
     ops.forEach(op => {
+      if (op.col === 'list') {
+        ids.push(code);
+        l.meta = { ...(l.meta || {}), ...(op.data || {}) };
+        return;
+      }
       const id = op.id || autoId();
       ids.push(id);
       const bucket = l[op.col];
